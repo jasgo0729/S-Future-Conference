@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BLUEPRINT - Bar Chart</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const ctx = document.getElementById('myBarChart').getContext('2d');
+
+      const gradient = ctx.createLinearGradient(0, 0, 300, 0);
+      gradient.addColorStop(0, 'rgba(27, 83, 155, 1)');      // 시작 (어두운 파랑)
+      gradient.addColorStop(0.5, 'rgba(100, 180, 255, 1)'); // 중간 (밝은 파랑)
+      gradient.addColorStop(1, 'rgba(27, 83, 155, 1)');      // 끝 (어두운 파랑)
+
+
+      const outsideValueLabels = {
+        id: 'outsideValueLabels',
+        afterDatasetsDraw(chart, args, opts) {
+          const { ctx, chartArea, data } = chart;
+          const meta = chart.getDatasetMeta(0);
+          const ds = data.datasets[0];
+          if (!meta || !meta.data) return;
+
+          const pad = opts?.padding ?? 5;
+          const color = opts?.color ?? '#1b1b1b';
+          const font = opts?.font ?? { size: 12, weight: '600', family: 'system-ui' };
+          const formatter = opts?.formatter ?? ((v) => v);
+
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.font = `${font.weight} ${font.size}px ${font.family}`;
+
+          ds.data.forEach((v, i) => {
+            const y = meta.data[i].y;
+            const text = formatter(v, i, data.labels);
+            ctx.fillText(text, chartArea.right + pad, y);
+          });
+          ctx.restore();
+        }
+      };
+
+      Chart.register(outsideValueLabels);
+
+      const labels = ['OpenAI', 'Tesla', '삼성전자', 'Palantir', 'Instagram', 'Amazon', 'KakaoPay', 'NAVER'];
+      const values = [80, 70, 60, 50, 40, 30, 20, 10];
+      const remainders = values.map(v => Math.max(0, 100 - v));
+
+      const data = {
+        labels,
+        datasets: [
+          {
+            label: '달성',
+            axis: 'y',
+            data: values,
+            backgroundColor: gradient, // ✅ (2) 수정된 그라데이션 적용
+            borderSkipped: false,
+            borderRadius: { topRight: 0, bottomRight: 0 },
+            barThickness: 20,
+            stack: 'progress'
+          },
+          {
+            label: '남음',
+            axis: 'y',
+            data: remainders,
+            backgroundColor: '#e6e6e6',
+            borderSkipped: false,
+            borderRadius: { topRight: 20, bottomRight: 20 },
+            barThickness: 20,
+            stack: 'progress'
+          }
+        ]
+      };
+
+      const config = {
+        type: 'bar',
+        data,
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { right: 35, left: 100 } },
+          scales: {
+            x: {
+              max: 100,
+              stacked: true,
+              grid: { display: false },
+              border: { display: false },
+              ticks: { display: false }
+            },
+            y: {
+              stacked: true,
+              grid: { display: false },
+              border: { display: false },
+              ticks: {
+                  display: true,
+                  font: { size: 13 },
+                  color: '#000'
+              }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false },
+            outsideValueLabels: {
+              padding: 5,
+              color: '#000',
+              font: { size: 12, weight: '600' },
+              formatter: (v) => v
+            }
+          }
+        }
+      };
+      new Chart(ctx, config);
+    });
+  </script>
+
+  <style>
+    #chartWrap { width: 380px; height: 390px; margin: 0 auto; }
+    canvas { display:block; width:100%; height:100%; }
+  </style>
+</head>
+<body>
+  <div id="chartWrap">
+    <canvas id="myBarChart" aria-label="달성 퍼센트 바 차트" role="img"></canvas>
+  </div>
+</body>
+</html>

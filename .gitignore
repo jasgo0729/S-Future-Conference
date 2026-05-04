@@ -1,3 +1,5 @@
-/GoogleDriveFiles
-/V2/node_modules
+/GoogleDriveFiles/*
+
 !/GoogleDriveFiles/BP_Conference_MainGame_Auto.ipynb
+
+/V2/node_modules/

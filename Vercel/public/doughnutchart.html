@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BLUEPRINT - Doughnut Chart</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; }
+    .chart-box { width: 250px; height: 180px; margin: 0 auto; }
+    .chart-box canvas { width: 100% !important; height: 100% !important; }
+  </style>
+
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      Chart.register(ChartDataLabels);
+
+      const ctx = document.getElementById('myDoughnutChart').getContext('2d');
+
+      const data = {
+        // 라벨: 전달받은 8개 팀 이름 + 시스템
+        labels: ['OpenAI', 'Tesla', '삼성전자', 'Palantir', 'Instagram', 'Amazon', 'KakaoPay', 'NAVER', 'SYSTEM'],
+        datasets: [{
+          label: '보유 주식',
+          data: [5, 10, 15, 20, 25, 30, 35, 40, 45],
+          // ✅ (2) 색상: 전달받은 8개 색상 코드로 수정
+          backgroundColor: [
+            '#ABF2E0', '#F2ABAB', '#AFDFFF', '#FFFFFF',
+            '#FFC8E8', '#F9C696', '#FFEF80', '#C2F2AB', '#495057'
+          ],
+          hoverOffset: 4,
+          borderWidth: 1, // 조각 사이에 얇은 경계선 추가
+          borderColor: '#333' // **********8주선이에게- borderColor은 원그래프의 경계선을 의미. #FFFFFF (흰색)으로 바꾸는 것 추천!
+        }]
+      };
+
+      const config = {
+        type: 'doughnut',
+        data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: 25 },
+          plugins: {
+            background : {color: 'transaparent'}, 
+            legend: {
+                display: false
+            },
+            tooltip: {
+                enabled: false
+            },
+            datalabels: {
+              formatter: (value, context) => {
+                const label = context.chart.data.labels[context.dataIndex];
+                return `${label} ${value}주`;
+              },
+              font: { size: 9, weight: 'bold' },
+              color: '#000',
+              //  가독성을 위한 라벨 테두리 추가 ---주선이에게: 라벨 테두리는 (기업명 + n주)를 의미. 이것 또한 흰색으로 바꿀 것 제안! (#000->#FFFFFF)
+              strokeColor: '#fff',
+              strokeWidth: 2,
+              anchor: 'end',
+              align: 'end',
+              offset: 8,
+              clamp: false,
+              clip: false
+            }
+          },
+          cutout: '50%',
+          radius: '95%'
+        }
+      };
+
+      new Chart(ctx, config);
+    });
+  </script>
+</head>
+<body>
+  <div class="chart-box">
+    <canvas id="myDoughnutChart" aria-label="도넛 차트" role="img"></canvas>
+  </div>
+</body>
+</html>
