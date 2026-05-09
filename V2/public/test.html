@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S-Future Conference | Order Center</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .order-wrapper {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.025em;
+        }
+
+        header p {
+            color: var(--text-sub);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .label-title {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        /* 텍스트 입력 스타일 */
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            box-sizing: border-box;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        /* 매수/매도 토글 스타일 */
+        .type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 14px;
+        }
+
+        .type-selector input[type="radio"] {
+            display: none;
+        }
+
+        .type-selector label {
+            padding: 10px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.2s;
+            color: var(--text-sub);
+        }
+
+        .type-selector input[type="radio"]:checked + label {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* 팀 선택 그리드 스타일 */
+        .team-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .team-item input[type="radio"] {
+            display: none;
+        }
+
+        .team-item label {
+            display: block;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .team-item input[type="radio"]:checked + label {
+            border-color: var(--primary);
+            background: rgba(79, 70, 229, 0.05);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 안내 문구 */
+        .helper-text {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 6px;
+        }
+
+        /* 버튼 스타일 */
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .reset-btn {
+            display: block;
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--text-sub);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="order-wrapper">
+    <header>
+        <h1>S-Future-Conference</h1>
+        <p>실리콘밸리의 제왕이 되어라</p>
+    </header>
+
+    <form id="tradeForm">
+        <div class="form-group">
+            <label class="label-title">보안 키</label>
+            <input type="text" name="securityKey" placeholder="인증 키를 입력하세요" required>
+        </div>
+
+        <div class="form-group">
+            <label class="label-title">거래 유형</label>
+            <div class="type-selector">
+                <input type="radio" name="orderType" id="buy" value="매수" checked>
+                <label for="buy">매수</label>
+                <input type="radio" name="orderType" id="sell" value="매도">
+                <label for="sell">매도</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="label-title">투자 대상 팀</label>
+            <div class="team-grid">
+                <div class="team-item"><input type="radio" name="team" id="t1" value="OpenAI" required><label for="t1">OpenAI</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t2" value="Tesla"><label for="t2">Tesla</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t3" value="삼성전자"><label for="t3">삼성전자</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t4" value="Palantir"><label for="t4">Palantir</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t5" value="Instagram"><label for="t5">Instagram</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t6" value="Amazon"><label for="t6">Amazon</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t7" value="KakaoPay"><label for="t7">KakaoPay</label></div>
+                <div class="team-item"><input type="radio" name="team" id="t8" value="NAVER"><label for="t8">NAVER</label></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="label-title">주문 수량</label>
+            <input type="number" name="quantity" placeholder="정수 단위로 입력" required min="1" step="1">
+            <p class="helper-text">예: 10 (소수점이나 '주' 단위 입력 불가)</p>
+        </div>
+
+        <button type="submit" class="submit-btn">주문 실행하기</button>
+        <a href="#" class="reset-btn" onclick="location.reload()">양식 초기화</a>
+    </form>
+</div>
+
+<script>
+    document.getElementById('tradeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const result = Object.fromEntries(formData.entries());
+        
+        // 간단한 확인창
+        const confirmMsg = `[${result.orderType}] ${result.team} - ${result.quantity}주\n이대로 주문하시겠습니까?`;
+        if(confirm(confirmMsg)) {
+            console.log("Submit Data:", result);
+            sendOrder(result);
+            alert("성공적으로 주문이 접수되었습니다.");
+        }
+    });
+
+    const sendOrder = async (result) => {
+        const url = `/api/order?securityKey=${result.securityKey}&orderType=${result.orderType}&team=${result.team}&quantity=${result.quantity}`;
+        try {
+            const response = await fetch(url); // GET 요청 전송
+            const result = await response.json(); // 서버에서 res.json()으로 보낸 응답 받기
+
+            if (response.ok) {
+                console.log(result.message); // "주문이 성공적으로 기록되었습니다."
+            } else {
+                console.log('에러: ' + result.error);
+            }
+        } catch (error) {
+            console.error('전송 실패:', error);
+            alert('서버와 통신 중 오류가 발생했습니다.');
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
-﻿Team,stockA,stockB,stockC,stockD,stockE,stockF,stockG,stockH
-A,20,0,0,0,0,0,0,0
+Team,stockA,stockB,stockC,stockD,stockE,stockF,stockG,stockH
+A,20,0,0,0,0,0,0,3
 B,0,20,0,0,0,0,0,0
 C,0,0,20,0,0,0,0,0
 D,0,0,0,20,0,0,0,0
@@ -7,4 +7,4 @@ E,0,0,0,0,20,0,0,0
 F,0,0,0,0,0,20,0,0
 G,0,0,0,0,0,0,20,0
 H,0,0,0,0,0,0,0,20
-S,80,80,80,80,80,80,80,80
+S,80,80,80,80,80,80,80,77

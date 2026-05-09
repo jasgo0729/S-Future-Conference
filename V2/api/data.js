@@ -31,7 +31,7 @@ function extractChartDataByRow(sheetData, dataRowIndex) {
     return { labels, values };
 }
 
-router.get('/sheets-data', async (req, res) => {
+router.get('/data', async (req, res) => {
     try {
         // 1. 파일 경로 설정 (프로젝트 루트의 data 폴더)
         const dataPath = path.join(process.cwd(), 'data');
@@ -72,6 +72,73 @@ router.get('/sheets-data', async (req, res) => {
     } catch (error) {
         console.error('파일 읽기 에러:', error);
         res.status(500).json({ error: '로컬 데이터를 읽는 중 오류가 발생했습니다.' });
+    }
+});
+
+// 기존 import 문 아래에 추가
+router.get('/order', async (req, res) => {
+    try {
+        const { securityKey, orderType, team, quantity } = req.query;
+
+        // 필수 데이터 체크
+        if (!securityKey || !orderType || !team || !quantity) {
+            return res.status(400).json({ error: '모든 필드(securityKey, orderType, team, quantity)를 입력해주세요.' });
+        }
+
+        // 2. 파일 경로 설정
+        const dataPath = path.join(process.cwd(), 'data');
+        const fileName = 'BP_TradeOrder.xlsx'; // 저장할 파일 이름
+        const filePath = path.join(dataPath, fileName);
+
+        let workbook;
+        let worksheet;
+        let sheetData = [];
+
+        // 3. 기존 파일이 있으면 읽어오고, 없으면 새로 생성
+        if (fs.existsSync(filePath)) {
+            workbook = XLSX.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            worksheet = workbook.Sheets[sheetName];
+            // 기존 데이터를 이중 배열로 변환
+            sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        } else {
+            workbook = XLSX.utils.book_new();
+            // 파일이 처음 생성될 경우 헤더 추가
+            sheetData = [['Timestamp', 'SecretKey', 'Type', 'Target Team', 'Quantity']];
+        }
+
+        // 4. 새로운 행 데이터 생성 (첫 번째 열은 현재 시간)
+        const newRow = [
+            new Date().toLocaleString(), // 타임스탬프
+            securityKey,
+            orderType,
+            team,
+            Number(quantity)
+        ];
+
+        // 5. 데이터 배열에 추가
+        sheetData.push(newRow);
+
+        // 6. 배열을 다시 시트로 변환하여 워크북에 업데이트
+        const newWorksheet = XLSX.utils.aoa_to_sheet(sheetData);
+        
+        if (workbook.SheetNames.length > 0) {
+            workbook.Sheets[workbook.SheetNames[0]] = newWorksheet;
+        } else {
+            XLSX.utils.book_append_sheet(workbook, newWorksheet, 'Orders');
+        }
+
+        // 7. 파일 쓰기 (맥 권한 문제가 발생할 수 있으니 주의)
+        XLSX.writeFile(workbook, filePath);
+
+        res.status(200).json({
+            message: '주문이 성공적으로 기록되었습니다.',
+            data: newRow
+        });
+
+    } catch (error) {
+        console.error('엑셀 기록 에러:', error);
+        res.status(500).json({ error: '엑셀 파일을 수정하는 중 오류가 발생했습니다.' });
     }
 });
 
