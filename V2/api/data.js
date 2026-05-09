@@ -87,7 +87,7 @@ router.get('/order', async (req, res) => {
 
         // 2. 파일 경로 설정
         const dataPath = path.join(process.cwd(), 'data');
-        const fileName = 'BP_TradeOrder.xlsx'; // 저장할 파일 이름
+        const fileName = 'BP_TradeOrder.csv'; // 저장할 파일 이름
         const filePath = path.join(dataPath, fileName);
 
         let workbook;
