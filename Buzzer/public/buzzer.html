@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>퀴즈 버저 - 사용자용</title>
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f8f9fa; font-family: sans-serif; overflow: hidden; }
+        #buzzer {
+            width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, #e74c3c, #c0392b);
+            box-shadow: 0 15px #991d11, 0 20px 30px rgba(0,0,0,0.5);
+            cursor: pointer; transition: all 0.1s; display: flex; justify-content: center; align-items: center;
+            color: white; font-size: 2rem; font-weight: bold; user-select: none;
+        }
+        #buzzer:active, #buzzer.active {
+            transform: translateY(10px); box-shadow: 0 5px #991d11, 0 10px 20px rgba(0,0,0,0.5); background: #ff4d4d;
+        }
+    </style>
+</head>
+<body>
+    <div id="buzzer">PRESS</div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const buzzer = document.getElementById('buzzer');
+        const id = localStorage.getItem('user_number');
+        const socket = io.connect('http://localhost:3001', {
+            path: '/socket.io',
+            transports: ['websocket']
+        });
+
+        socket.on("connect", () => {
+            console.log("서버와 연결되었습니다! ID:", socket.id);
+            socket.emit("user_join", id);
+        });
+
+        const activateBuzzer = () => {
+            buzzer.classList.add('active');
+        };
+        const resetBuzzer = () => {
+            buzzer.classList.remove('active');
+        }
+
+        // 클릭 및 키보드 이벤트
+        buzzer.addEventListener('pointerdown', function (e) {
+            buzzerListener();
+        });
+
+        const buzzerListener = () => {
+            socket.emit('buzzer', 'on');
+            console.log('buzzer clicked!');
+        }
+    </script>
+</body>
+</html>

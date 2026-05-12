@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>게임 입장</title>
+    <style>
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background: #f8f9fa; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+
+        .entry-container { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 350px; 
+            text-align: center;
+            border: 1px solid #eee;
+        }
+
+        h2 { color: #1a1a1a; margin-bottom: 10px; font-size: 1.5rem; }
+        p { color: #666; font-size: 0.9rem; margin-bottom: 30px; }
+
+        /* 입력창 스타일 */
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 0.85rem; color: #888; margin-bottom: 8px; margin-left: 4px; }
+        
+        input[type="number"] { 
+            width: 100%; 
+            padding: 15px; 
+            border: 2px solid #f0f0f0; 
+            border-radius: 12px; 
+            font-size: 1.1rem; 
+            box-sizing: border-box; 
+            outline: none;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        input[type="number"]:focus { 
+            border-color: #007AFF; 
+            background-color: #f0f7ff; 
+        }
+
+        /* 제출 버튼 스타일 */
+        .submit-btn { 
+            width: 100%; 
+            padding: 16px; 
+            background: #007AFF; 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 1.1rem; 
+            font-weight: 600;
+            cursor: pointer; 
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+        }
+
+        .submit-btn:hover { background: #0056b3; transform: translateY(-2px); }
+        .submit-btn:active { transform: translateY(0); box-shadow: none; }
+
+        /* 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .entry-container { animation: fadeIn 0.5s ease-out; }
+    </style>
+</head>
+<body>
+
+<div class="entry-container" id="entry-box">
+    <h2>Welcome!</h2>
+    <p>참여할 <b>본인의 번호</b>를 입력해주세요.</p>
+    
+    <div class="input-group">
+        <label>참여 번호 (숫자)</label>
+        <input type="number" id="user-number" placeholder="예: 7" min="1" max="100">
+    </div>
+
+    <button class="submit-btn" onclick="enterGame()">입장하기</button>
+</div>
+
+<script>
+    function enterGame() {
+        const userNum = document.getElementById('user-number').value;
+        
+        if (!userNum) {
+            alert("번호를 입력해주세요!");
+            return;
+        }
+
+        // 1. 번호를 로컬 스토리지에 저장 (나중에 식별자로 사용)
+        localStorage.setItem('user_number', userNum);
+
+        // 2. 간단한 전환 피드백
+        const btn = document.querySelector('.submit-btn');
+        btn.innerText = "연결 중...";
+        btn.style.background = "#ccc";
+        btn.disabled = true;
+
+        // 3. 실제 구현 시: 서버에 입장을 알리고 페이지 이동 또는 UI 교체
+        setTimeout(() => {
+            alert(userNum + "번으로 입장합니다.");
+            window.location.href = '/buzzer'; // 실제 입력 페이지로 이동
+        }, 800);
+    }
+
+    // 엔터키 지원
+    document.getElementById('user-number').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            enterGame();
+        }
+    });
+</script>
+
+</body>
+</html>

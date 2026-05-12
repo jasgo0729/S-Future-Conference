@@ -52,9 +52,9 @@ router.get('/data', async (req, res) => {
 
         // 3. 로컬 파일들 읽기
         const allData = {
-            teams: readSheet('Teams.xlsx'),
-            holdings: readSheet('Holdings.xlsx'), // 또는 'holdings.csv'
-            subsidiarys: readSheet('Subsidiarys.xlsx')
+            teams: readSheet('Teams.csv.csv'),
+            holdings: readSheet('Holdings.csv.csv'), // 또는 'holdings.csv'
+            subsidiarys: readSheet('Subsidiarys.csv.csv')
         };
 
         // 4. 데이터 가공 (기존 로직 동일)

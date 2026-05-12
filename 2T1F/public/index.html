@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>2개의 진실 1개의 거짓 - 입력</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #f8f9fa; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border: 1px solid #eee; }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 5px; }
+        .info-text { font-size: 0.85rem; color: #888; margin-bottom: 25px; text-align: center; }
+        
+        /* 조 이름 입력칸 스타일 */
+        .group-input-wrapper { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px dashed #f0f0f0; }
+        .group-label { display: block; font-size: 0.9rem; font-weight: bold; color: #333; margin-bottom: 8px; }
+        #group-name { 
+            width: 100%; padding: 12px; border: 2px solid #e1e4e8; border-radius: 10px; 
+            font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s;
+        }
+        #group-name:focus { border-color: #007AFF; background-color: #f0f7ff; }
+
+        #list-container { margin-bottom: 20px; }
+        .list-item { 
+            background: #fff; border: 2px solid #e1e4e8; padding: 15px; margin-bottom: 12px; 
+            border-radius: 10px; cursor: grab; display: flex; align-items: center; gap: 10px;
+            transition: border-color 0.2s;
+        }
+        .list-item:focus-within { border-color: #007AFF; }
+        .list-item input { border: none; outline: none; width: 100%; font-size: 1rem; background: transparent; }
+        .handle { color: #ccc; font-size: 20px; user-select: none; }
+        
+        .truth { border-left: 5px solid #4CAF50; }
+        .lie { border-left: 5px solid #F44336; }
+
+        button { 
+            width: 100%; padding: 15px; background: #007AFF; color: white; 
+            border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; 
+            transition: 0.3s; margin-top: 10px; box-shadow: 0 4px 10px rgba(0, 122, 255, 0.2);
+        }
+        button:hover { background: #0056b3; transform: translateY(-1px); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>나의 이야기 작성</h2>
+    <p class="info-text">순서를 자유롭게 섞어 상대를 속여보세요!</p>
+
+    <!-- 조 이름 입력 섹션 추가 -->
+    <div class="group-input-wrapper">
+        <label class="group-label" for="group-name">팀/조 이름</label>
+        <input type="text" id="group-name" placeholder="예: 1조, 무적A팀">
+    </div>
+    
+    <div id="list-container">
+        <!-- data-type 속성을 통해 실제 데이터가 진실인지 거짓인지 구분 유지 -->
+        <div class="list-item truth" data-type="truth">
+            <span class="handle">☰</span>
+            <input type="text" class="item-text" placeholder="진실을 입력하세요">
+        </div>
+        <div class="list-item truth" data-type="truth">
+            <span class="handle">☰</span>
+            <input type="text" class="item-text" placeholder="또 다른 진실을 입력하세요">
+        </div>
+        <div class="list-item lie" data-type="lie">
+            <span class="handle">☰</span>
+            <input type="text" class="item-text" placeholder="거짓을 입력하세요">
+        </div>
+    </div>
+
+    <button onclick="submitData()">제출하기</button>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io.connect('http://localhost:3002', {
+        path: '/socket.io',
+        transports: ['websocket']
+    });
+    let disabled = false;
+    // 드래그 앤 드롭 설정
+    const el = document.getElementById('list-container');
+    new Sortable(el, {
+        animation: 150,
+        handle: '.handle',
+        ghostClass: 'blue-background-class'
+    });
+
+    function submitData() {
+        if (disabled) return;
+        const groupName = document.getElementById('group-name').value;
+        const items = document.querySelectorAll('.list-item');
+        
+        if (!groupName) {
+            alert("조 이름을 입력해주세요!");
+            return;
+        }
+
+        // 현재 리스트에 보이는 순서대로 데이터를 수집
+        const gameData = {
+            group: groupName,
+            stories: Array.from(items).map(item => ({
+                text: item.querySelector('.item-text').value,
+                isTruth: item.getAttribute('data-type') === 'truth'
+            }))
+        };
+
+        // 입력 확인용 (실제 구현 시 소켓 emit이나 API 호출)
+        console.log("전송될 데이터:", gameData);
+        alert(`${groupName}의 데이터가 대시보드로 전송되었습니다!`);
+        disabled = true;
+        socket.emit('upload', gameData);
+    }
+</script>
+
+</body>
+</html>
