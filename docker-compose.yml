@@ -1,0 +1,23 @@
+services:
+  server1:
+    image: sfc_v2:latest
+    container_name: node_server_1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./V2/data:/V2/data
+    restart: always
+
+  server2:
+    image: sfc_buzzer:latest
+    container_name: node_server_2
+    ports:
+      - "3001:3001"
+    restart: always
+
+  server3:
+    image: sfc_2t1f:latest
+    container_name: node_server_3
+    ports:
+      - "3002:3002"
+    restart: always
