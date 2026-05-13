@@ -5,7 +5,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./V2/data:/V2/data
+      - ./V2/data:/app/data
     restart: always
 
   server2:
