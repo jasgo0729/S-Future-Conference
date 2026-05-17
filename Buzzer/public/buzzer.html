@@ -26,7 +26,7 @@
             path: '/socket.io',
             transports: ['websocket']
         });
-        const effectSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        const effectSound = new Audio('./buzzer.mp3');
 
         socket.on("connect", () => {
             console.log("서버와 연결되었습니다! ID:", socket.id);
@@ -46,7 +46,7 @@
         });
 
         const buzzerListener = () => {
-            effectSound.currentTime = 0; 
+            effectSound.currentTime = 0.7; 
             effectSound.play();
             socket.emit('buzzer', 'on');
             console.log('buzzer clicked!');
