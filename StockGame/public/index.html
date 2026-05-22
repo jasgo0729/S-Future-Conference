@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BP 모의투자 - 미니게임 예측 센터</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght=400;600;700;900&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen p-4 flex items-center justify-center transition-colors duration-300">
+
+    <div class="max-w-md w-full bg-white border border-gray-200/80 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.05)] space-y-5 relative overflow-hidden min-h-[420px] flex flex-col justify-between">
+        
+        <div class="absolute top-0 left-0 w-full h-[5px] bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500"></div>
+
+        <div id="main-investment-form" class="space-y-5 flex-1 flex flex-col justify-between">
+            
+            <div class="text-center">
+                <span class="text-[10px] uppercase font-black tracking-widest bg-amber-50 text-amber-700 border border-amber-200/60 px-3 py-1 rounded-full">Mini-Game Asset Center</span>
+                <h1 class="text-2xl font-black text-gray-900 mt-3">📊 시나리오 주식 투자</h1>
+                <p class="text-xs text-gray-500 mt-1.5">종목을 고르고 베팅 시 실시간 시나리오 정산이 실행됩니다.</p>
+            </div>
+
+            <div class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center shadow-sm my-2">
+                <div>
+                    <span class="block text-[11px] text-indigo-600/80 font-bold uppercase tracking-wider">우리 팀 가용 현금</span>
+                    <span id="display-team-id" class="text-sm font-extrabold text-gray-700">A팀 지정 대기</span>
+                </div>
+                <div class="text-right">
+                    <span id="display-cash-amount" class="text-xl font-black text-indigo-600 font-mono">0원</span>
+                </div>
+            </div>
+
+            <div class="space-y-4 flex-1 pt-2">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1.5">조(Team) 선택</label>
+                        <select id="select-team" onchange="fetchCurrentCash()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-xl p-3 text-sm font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
+                            <option value="A">A팀 (OpenAI)</option><option value="B">B팀 (Tesla)</option>
+                            <option value="C">C팀 (삼성전자)</option><option value="D">D팀 (Palantir)</option>
+                            <option value="E">E팀 (Instagram)</option><option value="F">F팀 (Amazon)</option>
+                            <option value="G">G팀 (KakaoPay)</option><option value="H">H팀 (NAVER)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1.5">투자할 타겟 종목</label>
+                        <select id="select-stock" class="w-full bg-gray-50 border border-gray-300 text-emerald-700 rounded-xl p-3 text-sm font-bold focus:outline-none focus:border-emerald-500 focus:bg-white transition-all">
+                            <option value="A">A종목 (OpenAI)</option><option value="B">B종목 (Tesla)</option>
+                            <option value="C">C종목 (삼성전자)</option><option value="D">D종목 (Palantir)</option>
+                            <option value="E">E종목 (Instagram)</option><option value="F">F종목 (Amazon)</option>
+                            <option value="G">G종목 (KakaoPay)</option><option value="H">H종목 (NAVER)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1.5">투자할 투자금 설정</label>
+                    <div class="relative">
+                        <input type="number" id="input-amount" placeholder="금액을 입력하세요" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3.5 font-mono font-bold text-gray-900 text-lg focus:outline-none focus:border-indigo-500 focus:bg-white transition-all pr-12">
+                        <span class="absolute right-4 top-4 font-bold text-gray-400 text-sm">원</span>
+                    </div>
+                </div>
+
+                <button onclick="submitInvestment()" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-indigo-200 active:scale-[0.99] cursor-pointer mt-2">
+                    📈 시나리오 체결 및 결과 확인
+                </button>
+            </div>
+        </div>
+
+        <div id="waiting-screen" class="hidden flex-1 flex flex-col items-center justify-center space-y-5 py-12 animate-fade-in">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+                <span class="absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-20 animate-ping"></span>
+                <span class="relative inline-flex rounded-full h-12 w-12 bg-indigo-100 border border-indigo-200 flex items-center justify-center text-2xl animate-pulse">⏳</span>
+            </div>
+            <div class="text-center space-y-1.5">
+                <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">결과를 기다리는 중...</h2>
+                <p class="text-xs text-gray-400 font-medium leading-relaxed">
+                    투자 계약서가 중앙 연산실로 접수되었습니다.<br>시나리오 마감 가동 연산이 진행 중입니다.
+                </p>
+            </div>
+        </div>
+
+        <div id="receipt-panel" class="hidden flex-1 flex flex-col justify-between space-y-4">
+            <div class="bg-amber-50/50 border border-amber-200 rounded-2xl p-4 space-y-3 font-mono text-xs shadow-inner flex-1">
+                <h3 class="text-amber-800 font-bold border-b border-amber-200 pb-2 flex justify-between items-center">
+                    <span class="tracking-tight">🧾 MINI-GAME INVOICE REGISTRATION</span>
+                    <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold">정산 완결</span>
+                </h3>
+                <div class="space-y-2 text-gray-600 pt-1">
+                    <div class="flex justify-between"><span>선택 투자 종목:</span><span id="rcpt-stock" class="text-gray-900 font-bold">A</span></div>
+                    <div class="flex justify-between"><span>총 투자 원금:</span><span id="rcpt-invested" class="text-gray-900 font-bold">0원</span></div>
+                    <div class="flex justify-between"><span>시나리오 수익률:</span><span id="rcpt-rate" class="text-emerald-600 font-bold">+0%</span></div>
+                    <div class="flex justify-between border-b border-amber-200 pb-2"><span>순수익 변동분:</span><span id="rcpt-profit" class="font-bold">0원</span></div>
+                    
+                    <div class="flex justify-between text-sm pt-1 items-center">
+                        <span class="font-bold text-gray-700">최종 가용 현금:</span>
+                        <span id="rcpt-final-cash" class="text-indigo-600 font-black text-base">0원</span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="resetToMainForm()" class="w-full bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold py-3 rounded-xl text-xs transition-all cursor-pointer">
+                🔄 다른 조 투자 진행하기 (돌아가기)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = () => {
+            fetchCurrentCash();
+        };
+
+        async function fetchCurrentCash() {
+            const teamId = document.getElementById('select-team').value;
+            try {
+                const response = await fetch(`/api/team-cash/${teamId}`);
+                const data = await response.json();
+                
+                document.getElementById('display-team-id').innerText = `${teamId}팀 현재 가용 자산`;
+                document.getElementById('display-cash-amount').innerText = `${data.cash.toLocaleString()}원`;
+            } catch (err) {
+                console.error("자산 패치 오류:", err);
+            }
+        }
+
+        async function submitInvestment() {
+            const teamId = document.getElementById('select-team').value;
+            const stockId = document.getElementById('select-stock').value;
+            const amount = document.getElementById('input-amount').value;
+
+            if(!amount || amount <= 0) return alert("정확한 베팅 금액을 입력해 주세요.");
+
+            // 1. 폼 가리고 대시보드를 "결과를 기다리는 중..." 화면으로 전환
+            document.getElementById('main-investment-form').classList.add('hidden');
+            document.getElementById('waiting-screen').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/invest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teamId, stockId, amount })
+                });
+                
+                const result = await response.json();
+                
+                // 일부러 정산 인디케이터 연출을 실감 나게 주어 UI 반응 보정 (800ms 딜레이 후 노출)
+                setTimeout(() => {
+                    // 2. 대기 스크린 아웃
+                    document.getElementById('waiting-screen').classList.add('hidden');
+
+                    if(!response.ok) {
+                        alert(result.message || "오류가 발생했습니다.");
+                        return resetToMainForm(); // 실패 시 원복
+                    }
+
+                    // 3. 자산 현황판 바인딩 및 영수증 활성화
+                    document.getElementById('display-cash-amount').innerText = `${result.newCash.toLocaleString()}원`;
+                    document.getElementById('rcpt-stock').innerText = `${result.targetStock} 종목`;
+                    document.getElementById('rcpt-invested').innerText = `${result.invested.toLocaleString()}원`;
+                    
+                    const isProfit = result.netProfit >= 0;
+                    const rateLabel = document.getElementById('rcpt-rate');
+                    rateLabel.innerText = `${isProfit ? '+' : ''}${result.rate.toFixed(0)}%`;
+                    rateLabel.className = isProfit ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+
+                    const profitLabel = document.getElementById('rcpt-profit');
+                    profitLabel.innerText = `${isProfit ? '+' : ''}${result.netProfit.toLocaleString()}원`;
+                    profitLabel.className = isProfit ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+
+                    document.getElementById('rcpt-final-cash').innerText = `${result.newCash.toLocaleString()}원`;
+                    
+                    // 영수증 언락
+                    document.getElementById('receipt-panel').classList.remove('hidden');
+                    document.getElementById('input-amount').value = '';
+                }, 100000000);
+                
+            } catch (err) {
+                alert("서버 통신 실패");
+                resetToMainForm();
+            }
+        }
+
+        // 초기 화면 복구 헬퍼 함수
+        function resetToMainForm() {
+            document.getElementById('waiting-screen').classList.add('hidden');
+            document.getElementById('receipt-panel').classList.add('hidden');
+            document.getElementById('main-investment-form').classList.remove('hidden');
+            fetchCurrentCash(); // 동기화 자산 리프레시
+        }
+    </script>
+</body>
+</html>

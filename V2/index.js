@@ -25,6 +25,11 @@ app.get('/trade_order', (req, res) => {
   res.sendFile(filePath);
 });
 
+app.get('/main', (req, res) => {
+  const filePath = path.join(process.cwd(), 'public', 'main.html');
+  res.sendFile(filePath);
+})
+
 // 404 에러 처리 미들웨어
 app.use((req, res, next) => {
   res.status(404).send('페이지를 찾을 수 없습니다.');

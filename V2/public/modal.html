@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BP 모의투자 - 클라이언트 화면 (화이트 테마)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght=400;500;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-center items-center p-6">
+
+    <div class="max-w-md w-full bg-white border border-gray-200 rounded-2xl p-6 shadow-xl text-center space-y-4">
+        <h1 class="text-xl font-bold text-indigo-600">🎮 우리 팀 투자 현황 (클라이언트 창)</h1>
+        <p class="text-sm text-gray-500">백엔드 서버로부터 실시간 소켓 신호를 대기하는 중입니다...</p>
+        
+        <div class="pt-4 flex flex-col space-y-2">
+            <button onclick="triggerStep1('OpenAI', 15)" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all cursor-pointer">
+                테스트 1: 강매 요청 알림 띄우기
+            </button>
+        </div>
+    </div>
+
+
+    <div id="modal-step-1" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-md"></div>
+        
+        <div class="relative bg-white border border-gray-100 rounded-2xl max-w-sm w-full p-6 shadow-2xl transform transition-all">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-50 border border-red-200 mb-4">
+                <span class="text-red-500 font-bold text-xl">⚠️</span>
+            </div>
+            
+            <h3 class="text-lg font-bold text-center text-gray-900 mb-2">강매 발동!</h3>
+            
+            <p class="text-sm text-gray-600 text-center leading-relaxed">
+                모회사 <span id="md1-parent-name" class="text-indigo-600 font-bold">OpenAI</span>에 강매를 진행할 수 있습니다.<br>
+                모회사가 보유 중인 자사주 수량은 총 <span id="md1-stock-qty" class="text-amber-600 font-bold">0</span>주입니다.<br>
+                강매를 진행하시겠습니까?
+            </p>
+
+            <div class="mt-6 grid grid-cols-2 gap-3">
+                <button onclick="handleReject()" class="bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-xl text-sm transition-all cursor-pointer">
+                    거절하기 (X)
+                </button>
+                <button onclick="goToStep2()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md shadow-red-200 transition-all cursor-pointer">
+                    수락 및 진행 (O)
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="modal-step-2" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-md"></div>
+        
+        <div class="relative bg-white border border-gray-100 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 class="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4 flex items-center gap-1.5">
+                <span class="text-indigo-600">🤝</span> 강매 거래 체결 계약서
+            </h3>
+            
+            <div class="space-y-4 text-sm">
+                <div class="bg-gray-50 p-3.5 rounded-xl space-y-2 border border-gray-200/60 font-mono text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">거래 대상</span>
+                        <span id="md2-parent-name" class="text-gray-800 font-bold">OpenAI팀</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">모회사 매물</span>
+                        <span id="md2-max-stock" class="text-indigo-600 font-bold">0주 보유</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">강매 기준가</span>
+                        <span id="md2-stock-price" class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">현재 주가 × (R / 2)</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1.5 font-semibold">강매를 수용할 주식 수량 입력</label>
+                    <div class="relative">
+                        <input type="number" id="trade-quantity" min="1" placeholder="수량을 입력하세요" 
+                               class="w-full bg-white border border-gray-300 rounded-xl p-3 text-sm text-gray-900 font-bold font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 pr-12 transition-all">
+                        <span class="absolute right-4 top-3.5 text-sm text-gray-400 font-bold">주</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex space-x-2">
+                <button onclick="closeAllModals()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 px-4 rounded-xl text-sm font-medium transition-all cursor-pointer">
+                    취소
+                </button>
+                <button onclick="submitFinalTrade()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md shadow-indigo-100 transition-all cursor-pointer">
+                    계약서 서명 및 전송
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        let currentTradeSession = {
+            parentName: "",
+            maxStock: 0
+        };
+
+        function triggerStep1(parentName, maxStock) {
+            currentTradeSession.parentName = parentName;
+            currentTradeSession.maxStock = maxStock;
+
+            document.getElementById('md1-parent-name').innerText = parentName;
+            document.getElementById('md1-stock-qty').innerText = maxStock;
+            document.getElementById('modal-step-1').classList.remove('hidden');
+        }
+
+        function handleReject() {
+            alert("강매 거절 신호를 서버로 전송합니다 (X)");
+            // ws.send(JSON.stringify({ "type": "FORCED_TRADE_RESPONSE", "action": "X" }));
+            closeAllModals();
+        }
+
+        function goToStep2() {
+            document.getElementById('modal-step-1').classList.add('hidden');
+            
+            document.querySelectorAll('#md2-parent-name').forEach(el => el.innerText = currentTradeSession.parentName + "팀");
+            document.getElementById('md2-max-stock').innerText = currentTradeSession.maxStock + "주 보유";
+            document.getElementById('trade-quantity').max = currentTradeSession.maxStock;
+            document.getElementById('trade-quantity').value = '';
+
+            document.getElementById('modal-step-2').classList.remove('hidden');
+        }
+
+        function submitFinalTrade() {
+            const qty = document.getElementById('trade-quantity').value;
+            
+            if (!qty || qty <= 0) {
+                return alert("올바른 수량을 입력해 주세요.");
+            }
+            if (parseInt(qty) > currentTradeSession.maxStock) {
+                return alert(`모회사가 보유한 최대 수량(${currentTradeSession.maxStock}주)을 초과할 수 없습니다.`);
+            }
+
+            alert(`정상 처리 완료: ${currentTradeSession.parentName}팀 주식 ${qty}주 강매 체결 요청을 서버로 발송합니다.`);
+            // ws.send(JSON.stringify({ "type": "FORCED_TRADE_RESPONSE", "action": "O", "qty": parseInt(qty) }));
+            closeAllModals();
+        }
+
+        function closeAllModals() {
+            document.getElementById('modal-step-1').classList.add('hidden');
+            document.getElementById('modal-step-2').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

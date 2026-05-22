@@ -1,0 +1,1315 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slides</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js/dist/reveal.css" />
+
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght=400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+  </style>
+
+  <link rel="stylesheet" href="globals.css" />
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+  </style>
+</head>
+<!-- Chart.js 본체 -->
+<script src="/main.js"></script>
+<!-- (도넛 라벨 쓸 거면) DataLabels 플러그인 -->
+
+<!-- <script src="update.js"></script> -->
+
+<body>
+  <div id="modal-step-1" class="custom-fixed-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-md"></div>
+
+    <div
+      class="relative bg-white border border-gray-100 rounded-2xl max-w-sm w-full p-6 shadow-2xl transform transition-all">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-50 border border-red-200 mb-4">
+        <span class="text-red-500 font-bold text-xl">⚠️</span>
+      </div>
+
+      <h3 class="text-lg font-bold text-center text-gray-900 mb-2">강매 발동!</h3>
+
+      <p class="text-sm text-gray-600 text-center leading-relaxed">
+        모회사 <span id="md1-parent-name" class="text-indigo-600 font-bold">OpenAI</span>에 강매를 진행할 수 있습니다.<br>
+        모회사가 보유 중인 자사주 수량은 총 <span id="md1-stock-qty" class="text-amber-600 font-bold">0</span>주입니다.<br>
+        강매를 진행하시겠습니까?
+      </p>
+
+      <div class="mt-6 grid grid-cols-2 gap-3">
+        <button onclick="handleReject()"
+          class="bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium py-2.5 rounded-xl text-sm transition-all cursor-pointer">
+          거절하기 (X)
+        </button>
+        <button onclick="goToStep2()"
+          class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md shadow-red-200 transition-all cursor-pointer">
+          수락 및 진행 (O)
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="modal-step-2" class="custom-fixed-modal hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-md"></div>
+
+    <div class="relative bg-white border border-gray-100 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+      <h3 class="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4 flex items-center gap-1.5">
+        <span class="text-indigo-600">🤝</span> 강매 거래 체결 계약서
+      </h3>
+
+      <div class="space-y-4 text-sm">
+        <div class="bg-gray-50 p-3.5 rounded-xl space-y-2 border border-gray-200/60 font-mono text-xs">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500 font-medium">거래 대상</span>
+            <span id="md2-parent-name" class="text-gray-800 font-bold">OpenAI팀</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500 font-medium">모회사 매물</span>
+            <span id="md2-max-stock" class="text-indigo-600 font-bold">0주 보유</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500 font-medium">강매 기준가</span>
+            <span id="md2-stock-price" class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">현재 주가 × (R /
+              2)</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-600 mb-1.5 font-semibold">강매를 수용할 주식 수량 입력</label>
+          <div class="relative">
+            <input type="number" id="trade-quantity" min="1" placeholder="수량을 입력하세요"
+              class="w-full bg-white border border-gray-300 rounded-xl p-3 text-sm text-gray-900 font-bold font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 pr-12 transition-all">
+            <span class="absolute right-4 top-3.5 text-sm text-gray-400 font-bold">주</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex space-x-2">
+        <button onclick="closeAllModals()"
+          class="bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 px-4 rounded-xl text-sm font-medium transition-all cursor-pointer">
+          취소
+        </button>
+        <button onclick="submitFinalTrade()"
+          class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md shadow-indigo-100 transition-all cursor-pointer">
+          계약서 서명 및 전송
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="client-sabotage-modal" class="hidden fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    
+    <div class="relative bg-white border border-gray-100 rounded-3xl max-w-sm w-full p-6 shadow-2xl transform transition-all space-y-4">
+        
+        <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-amber-50 border border-amber-200 shadow-sm animate-bounce">
+            <span class="text-amber-600 font-bold text-2xl">🥷</span>
+        </div>
+
+        <div class="text-center space-y-1">
+            <h3 class="text-xl font-black text-gray-900 tracking-tight">미니게임 상위권 보상</h3>
+            <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider">사보타지 권한이 활성화되었습니다</p>
+        </div>
+
+        <div class="text-sm text-gray-600 text-center leading-relaxed space-y-2 bg-gray-50 p-4 rounded-2xl border border-gray-150">
+            <p>
+                축하합니다! 미니게임에서 상위권을 달성했습니다.<br>
+                현재 팀은 <span id="sabotage-parent-name" class="text-indigo-600 font-bold">모기업</span>의 자회사 상태입니다.
+            </p>
+            <div class="pt-2 border-t border-gray-200/60 font-mono text-xs text-gray-500 flex justify-between px-2">
+                <span>모기업 보유 자사주:</span>
+                <span id="sabotage-available-stock" class="text-rose-600 font-bold">0주</span>
+            </div>
+        </div>
+
+        <p class="text-[11px] text-center text-gray-400 leading-relaxed">
+            ※ [사보타지] 선택 시 이번 라운드 미니게임 상금(현금) 수령을 포기하는 대신, 모기업이 쥐고 있는 자사 지분을 강제로 돌려받습니다.
+        </p>
+
+        <div class="grid grid-cols-1 gap-2 pt-1">
+            <button onclick="selectSabotageReward(true)"
+                    class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-3 rounded-2xl text-sm shadow-lg shadow-amber-700/20 active:scale-[0.99] transition-all cursor-pointer">
+                ⚡ 상금 포기하고 [사보타지] 발동
+            </button>
+            
+            <button onclick="selectSabotageReward(false)"
+                    class="w-full bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 font-semibold py-3 rounded-2xl text-sm active:scale-[0.99] transition-all cursor-pointer">
+                💰 일반 미니게임 상금 수령하기
+            </button>
+        </div>
+    </div>
+</div>
+  <div class="reveal">
+    <div class="slides">
+      <section id="slide-1">
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="BG-main"></div>
+              <div class="BG-oai"></div>
+              <div class="rect-text-openai-oai"></div>
+              <div class="BG-price-oai"></div>
+              <div class="BG-oai-2"></div>
+              <div class="BG-ror-oai"></div>
+              <div class="BG-oai-3"></div>
+              <div class="BG-oai-4"></div>
+              <div class="oai">%</div>
+              <img class="polygon-oai" src="img/polygon-oai-1.svg" />
+              <div class="text-openai-oai">OpenAI</div>
+              <div class="price-oai">주가</div>
+              <div class="ror-oai" data-sheet="teams" data-row="2" data-col="6">80</div>
+              <div class="oai-2">원</div>
+              <div class="oai-3" data-sheet="teams" data-row="2" data-col="4">800,000</div>
+              <div class="sys-oai">시스템 보유 주식:</div>
+              <div class="stock-oai" data-sheet="holdings" data-row="10" data-col="2">80</div>
+              <div class="oai-4">주</div>
+              <div class="oai-5">100</div>
+              <div class="stockslash-oai">/</div>
+              <div class="BG-pal"></div>
+              <div class="rect-text-palantir"></div>
+              <div class="BG-price-pal"></div>
+              <div class="BG-pal-2"></div>
+              <div class="BG-ror-pal"></div>
+              <div class="BG-pal-3"></div>
+              <div class="BG-pal-4"></div>
+              <div class="pal">%</div>
+              <img class="polygon-pal" src="img/polygon-pal-1.svg" />
+              <div class="text-palantir-pal">Palantir</div>
+              <div class="price-pal">주가</div>
+              <div class="ror-pal" data-sheet="teams" data-row="5" data-col="6">50</div>
+              <div class="pal-2">원</div>
+              <div class="pal-3" data-sheet="teams" data-row="5" data-col="4">500,000</div>
+              <div class="sys-pal">시스템 보유 주식:</div>
+              <div class="stock-pal" data-sheet="holdings" data-row="10" data-col="5">50</div>
+              <div class="pal-4">주</div>
+              <div class="pal-5">100</div>
+              <div class="stockslash-pal">/</div>
+              <div class="BG-ama"></div>
+              <div class="rect-text-amazon-ama"></div>
+              <div class="BG-price-ama"></div>
+              <div class="BG-ama-2"></div>
+              <div class="BG-ror-ama"></div>
+              <div class="BG-ama-3"></div>
+              <div class="BG-ama-4"></div>
+              <div class="ama">%</div>
+              <img class="polygon-ama" src="img/polygon-ama-1.svg" />
+              <div class="text-amazon-ama">Amazon</div>
+              <div class="price-ama">주가</div>
+              <div class="ror-ama" data-sheet="teams" data-row="7" data-col="6">30</div>
+              <div class="ama-2">원</div>
+              <div class="ama-3" data-sheet="teams" data-row="7" data-col="4">300,000</div>
+              <div class="sys-ama">시스템 보유 주식:</div>
+              <div class="stock-ama" data-sheet="holdings" data-row="10" data-col="7">30</div>
+              <div class="ama-4">주</div>
+              <div class="ama-5">100</div>
+              <div class="stockslash-ama">/</div>
+              <div class="BG-sam"></div>
+              <div class="rect-text-samsung"></div>
+              <div class="BG-price-sam"></div>
+              <div class="BG-sam-2"></div>
+              <div class="BG-ror-sam"></div>
+              <div class="BG-sam-3"></div>
+              <div class="BG-sam-4"></div>
+              <div class="sam">%</div>
+              <img class="polygon-sam" src="img/polygon-sam-1.svg" />
+              <div class="text-samsung-sam">삼성전자</div>
+              <div class="price-sam">주가</div>
+              <div class="ror-sam" data-sheet="teams" data-row="4" data-col="6">60</div>
+              <div class="sam-2">원</div>
+              <div class="sam-3" data-sheet="teams" data-row="4" data-col="4">600,000</div>
+              <div class="sys-sam">시스템 보유 주식:</div>
+              <div class="stock-sam" data-sheet="holdings" data-row="10" data-col="4">60</div>
+              <div class="sam-4">주</div>
+              <div class="sam-5">100</div>
+              <div class="stockslash-sam">/</div>
+              <div class="BG-ins"></div>
+              <div class="rect-text-instagram"></div>
+              <div class="BG-price-ins"></div>
+              <div class="BG-ins-2"></div>
+              <div class="BG-ror-ins"></div>
+              <div class="BG-ins-3"></div>
+              <div class="BG-ins-4"></div>
+              <div class="ins">%</div>
+              <img class="polygon-ins" src="img/polygon-ins-1.svg" />
+              <div class="text-instagram-ins">Instagram</div>
+              <div class="price-ins">주가</div>
+              <div class="ror-ins" data-sheet="teams" data-row="6" data-col="6">40</div>
+              <div class="ins-2">원</div>
+              <div class="ins-3" data-sheet="teams" data-row="6" data-col="4">400,000</div>
+              <div class="sys-ins">시스템 보유 주식:</div>
+              <div class="stock-ins" data-sheet="holdings" data-row="10" data-col="6">40</div>
+              <div class="ins-4">주</div>
+              <div class="ins-5">100</div>
+              <div class="stockslash-ins">/</div>
+              <div class="BG-nav"></div>
+              <div class="rect-text-NAVER-nav"></div>
+              <div class="BG-price-nav"></div>
+              <div class="BG-nav-2"></div>
+              <div class="BG-ror-nav"></div>
+              <div class="BG-nav-3"></div>
+              <div class="BG-nav-4"></div>
+              <div class="nav">%</div>
+              <img class="polygon-nav" src="img/polygon-nav-1.svg" />
+              <div class="text-NAVER-nav">NAVER</div>
+              <div class="price-nav">주가</div>
+              <div class="ror-nav" data-sheet="teams" data-row="9" data-col="6">10</div>
+              <div class="nav-2">원</div>
+              <div class="nav-3" data-sheet="teams" data-row="9" data-col="4">100,000</div>
+              <div class="sys-nav">시스템 보유 주식:</div>
+              <div class="stock-nav" data-sheet="holdings" data-row="10" data-col="9">10</div>
+              <div class="nav-4">주</div>
+              <div class="nav-5">100</div>
+              <div class="stockslash-nav">/</div>
+              <div class="BG-tes"></div>
+              <div class="rect-text-TESLA-tes"></div>
+              <div class="BG-price-tes"></div>
+              <div class="BG-tes-2"></div>
+              <div class="BG-ror-tes"></div>
+              <div class="BG-tes-3"></div>
+              <div class="BG-tes-4"></div>
+              <div class="tes">%</div>
+              <img class="polygon-tes" src="img/polygon-tes-1.svg" />
+              <div class="text-TESLA-tes">Tesla</div>
+              <div class="price-tes">주가</div>
+              <div class="ror-tes" data-sheet="teams" data-row="3" data-col="6">70</div>
+              <div class="tes-2">원</div>
+              <div class="tes-3" data-sheet="teams" data-row="3" data-col="4">700,000</div>
+              <div class="sys-tes">시스템 보유 주식:</div>
+              <div class="stock-tes" data-sheet="holdings" data-row="10" data-col="3">70</div>
+              <div class="tes-4">주</div>
+              <div class="tes-5">100</div>
+              <div class="stockslash-tes">/</div>
+              <div class="BG-center"></div>
+              <div class="BG-kak"></div>
+              <div class="rect-text-kakaopay"></div>
+              <div class="BG-price-kak"></div>
+              <div class="BG-kak-2"></div>
+              <div class="BG-ror-kak"></div>
+              <div class="BG-kak-3"></div>
+              <div class="BG-kak-4"></div>
+              <div class="kak">%</div>
+              <img class="polygon-kak" src="img/polygon-kak-1.svg" />
+              <div class="text-kakaopay-kak">KakaoPay</div>
+              <div class="price-kak">주가</div>
+              <div class="ror-kak" data-sheet="teams" data-row="8" data-col="6">20</div>
+              <div class="kak-2">원</div>
+              <div class="kak-3" data-sheet="teams" data-row="8" data-col="4">200,000</div>
+              <div class="sys-kak">시스템 보유 주식:</div>
+              <div class="stock-kak" data-sheet="holdings" data-row="10" data-col="8">20</div>
+              <div class="kak-4">주</div>
+              <div class="kak-5">100</div>
+              <div class="stockslash-kak">/</div>
+              <img class="logo-oai" src="img/logo-oai-1.png" />
+              <img class="logo-tes" src="img/logo-tes-1.png" />
+              <img class="logo-sam" src="img/logo-sam-1.png" />
+              <img class="logo-pal" src="img/logo-pal-1.png" />
+              <img class="logo-ins" src="img/logo-ins-1.png" />
+              <img class="logo-ama" src="img/logo-ama-1.png" />
+              <img class="logo-kak" src="img/logo-kak-1.png" />
+              <img class="logo-nav" src="img/logo-nav-1.png" />
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-2">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <img class="logo-oai" src="img/logo-oai-2.png" />
+                <div class="div">
+                  <div class="rect-teamname-oai"></div>
+                  <div class="teamname-oai">OpenAI</div>
+                </div>
+                <div class="oai-wrapper">
+                  <div class="oai" data-sheet="teams" data-row="2" data-col="12">1</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-oai"></div>
+                  <div class="rank-oai">순위</div>
+                </div>
+                <div class="rank-oai-wrapper">
+                  <div class="oai">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="tot-oai">total.</div>
+                  <div class="tot-ast-oai" data-sheet="teams" data-row="2" data-col="8">80,000,000</div>
+                  <div class="tot">원</div>
+                </div>
+                <div class="text-wrapper">:</div>
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="structure-oai">OpenAI: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="stock-oai">OpenAI 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s2-bar1">
+                <canvas id="s2-bar1"></canvas>
+              </div>
+              <div class="chart-slot s2-donut1">
+                <canvas id="s2-donut1"></canvas>
+              </div>
+              <div class="par-oai-wrapper">
+                <div class="par-oai" data-sheet="teams" data-row="2" data-col="10">Tesla</div>
+              </div>
+              <div class="div-wrapper">
+                <div class="text-wrapper-2">모회사</div>
+              </div>
+              <div class="overlap-6">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="2">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="3">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="4">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="5">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="6">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="7">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="8">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-oai" data-sheet="subsidiarys" data-row="2" data-col="9">자회사</div>
+                <div class="text-wrapper-3">[</div>
+                <div class="text-wrapper-4">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="BG-oai-2"></div>
+                <div class="text-wrapper-5">자본</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-oai-3"></div>
+                <div class="text-wrapper-5">원</div>
+              </div>
+              <div class="cpt-oai-wrapper">
+                <div class="oai-2" data-sheet="teams" data-row="2" data-col="2">8,000,000</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-oai-2"></div>
+                <div class="text-wrapper-5">주가</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-oai-3"></div>
+                <div class="text-wrapper-5">원</div>
+              </div>
+              <div class="price-oai-wrapper">
+                <div class="oai-2" data-sheet="teams" data-row="2" data-col="4">800,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-3">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="div">
+                  <div class="rect-teamname-tes"></div>
+                  <div class="teamname-tes">Tesla</div>
+                </div>
+                <div class="tes-wrapper">
+                  <div class="text-wrapper" data-sheet="teams" data-row="3" data-col="12">2</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-tes"></div>
+                  <div class="text-wrapper-2">순위</div>
+                </div>
+                <div class="div-wrapper">
+                  <div class="text-wrapper">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="text-wrapper-3">total.</div>
+                  <div class="tot-tes" data-sheet="teams" data-row="3" data-col="8">70,000,000</div>
+                  <div class="text-wrapper-4">원</div>
+                </div>
+                <div class="text-wrapper-5">:</div>
+                <img class="logo-tes" src="img/logo-tes-3.png" />
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="structure-tes">Tesla: 전체 주식 지분 구조</p>
+              </div>
+              <div class="chart-slot s3-donut1">
+                <canvas id="s3-donut1"></canvas>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="stock-tes">Tesla 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s3-bar1">
+                <canvas id="s3-bar1"></canvas>
+              </div>
+              <div class="chart-slot s3-donut1">
+                <canvas id="s3-donut1"></canvas>
+              </div>
+              <div class="par-tes-wrapper">
+                <div class="tes" data-sheet="teams" data-row="3" data-col="10">삼성전자</div>
+              </div>
+              <div class="overlap-6">
+                <div class="text-wrapper-6">모회사</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="2">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="3">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="4">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="5">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="6">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="7">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="8">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="sub-tes" data-sheet="subsidiarys" data-row="3" data-col="9">자회사</div>
+                <div class="text-wrapper-7">[</div>
+                <div class="text-wrapper-8">]</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-tes-2"></div>
+                <div class="text-wrapper-9">자본</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-tes-3"></div>
+                <div class="text-wrapper-9">원</div>
+              </div>
+              <div class="cpt-tes-wrapper">
+                <div class="tes-2" data-sheet="teams" data-row="3" data-col="2">7,000,000</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-tes-2"></div>
+                <div class="text-wrapper-9">주가</div>
+              </div>
+              <div class="overlap-18">
+                <div class="BG-tes-3"></div>
+                <div class="text-wrapper-9">원</div>
+              </div>
+              <div class="price-tes-wrapper">
+                <div class="tes-2" data-sheet="teams" data-row="3" data-col="4">700,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-4">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="div">
+                  <div class="rect-teamname-sam"></div>
+                  <div class="teamname-sam">삼성전자</div>
+                </div>
+                <div class="sam-wrapper">
+                  <div class="text-wrapper" data-sheet="teams" data-row="4" data-col="12">3</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-sam"></div>
+                  <div class="text-wrapper-2">순위</div>
+                </div>
+                <div class="div-wrapper">
+                  <div class="text-wrapper">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="text-wrapper-3">total.</div>
+                  <div class="tot-sam" data-sheet="teams" data-row="4" data-col="8">60,000,000</div>
+                  <div class="text-wrapper-4">원</div>
+                </div>
+                <div class="text-wrapper-5">:</div>
+                <img class="logo-sam" src="img/logo-sam-4.png" />
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="structure-sam">삼성전자: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="text-wrapper-6">삼성전자 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s4-bar1">
+                <canvas id="s4-bar1"></canvas>
+              </div>
+              <div class="chart-slot s4-donut1">
+                <canvas id="s4-donut1"></canvas>
+              </div>
+              <div class="par-sam-wrapper">
+                <div class="sam" data-sheet="teams" data-row="4" data-col="10">Palantir</div>
+              </div>
+              <div class="overlap-6">
+                <div class="text-wrapper-7">모회사</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="2">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="3">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="4">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="5">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="6">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="7">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="8">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="sub-sam" data-sheet="subsidiarys" data-row="4" data-col="9">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-sam-2"></div>
+                <div class="text-wrapper-10">자본</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-sam-3"></div>
+                <div class="text-wrapper-10">원</div>
+              </div>
+              <div class="cpt-sam-wrapper">
+                <div class="sam-2" data-sheet="teams" data-row="4" data-col="2">6,000,000</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-sam-2"></div>
+                <div class="text-wrapper-10">주가</div>
+              </div>
+              <div class="overlap-18">
+                <div class="BG-sam-3"></div>
+                <div class="text-wrapper-10">원</div>
+              </div>
+              <div class="price-sam-wrapper">
+                <div class="sam-2" data-sheet="teams" data-row="4" data-col="4">600,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-5">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="BG-pal"></div>
+                <div class="rect-teamname-pal"></div>
+                <div class="BG-rank-pal"></div>
+                <div class="div"></div>
+                <div class="BG-pal-2"></div>
+                <div class="text-wrapper">Palantir</div>
+                <div class="text-wrapper-2">total.</div>
+                <div class="tot-pal" data-sheet="teams" data-row="5" data-col="8">50,000,000</div>
+                <div class="text-wrapper-3">원</div>
+                <div class="pal" data-sheet="teams" data-row="5" data-col="12">4</div>
+                <div class="text-wrapper-4">순위</div>
+                <div class="text-wrapper-5">위</div>
+                <div class="text-wrapper-6">:</div>
+                <img class="logo-pal" src="img/logo-pal-5.png" />
+              </div>
+              <div class="overlap-2">
+                <div class="div-2"></div>
+                <p class="p">Palantir: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-3">
+                <div class="div-2"></div>
+                <div class="stock-pal">Palantir 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s5-bar1">
+                <canvas id="s5-bar1"></canvas>
+              </div>
+              <div class="chart-slot s5-donut1">
+                <canvas id="s5-donut1"></canvas>
+              </div>
+              <div class="pal-wrapper">
+                <div class="par-pal" data-sheet="teams" data-row="5" data-col="10">Instagram</div>
+              </div>
+              <div class="div-wrapper">
+                <div class="text-wrapper-7">모회사</div>
+              </div>
+              <div class="overlap-4">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="2">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-5">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="3">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-6">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="4">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="5">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="6">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="7">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="8">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-pal" data-sheet="subsidiarys" data-row="5" data-col="9">자회사</div>
+                <div class="text-wrapper-8">[</div>
+                <div class="text-wrapper-9">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="BG-pal-3"></div>
+                <div class="text-wrapper-10">자본</div>
+              </div>
+              <div class="overlap-13">
+                <div class="BG-pal-4"></div>
+                <div class="text-wrapper-10">원</div>
+              </div>
+              <div class="cpt-pal-wrapper">
+                <div class="pal-2" data-sheet="teams" data-row="5" data-col="2">5,000,000</div>
+              </div>
+              <div class="overlap-14">
+                <div class="BG-pal-3"></div>
+                <div class="text-wrapper-10">주가</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-pal-4"></div>
+                <div class="text-wrapper-10">원</div>
+              </div>
+              <div class="price-pal-wrapper">
+                <div class="pal-2" data-sheet="teams" data-row="5" data-col="4">500,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-6">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="div">
+                  <div class="rect-teamname-ins"></div>
+                  <div class="text-wrapper">Instagram</div>
+                </div>
+                <div class="ins-wrapper">
+                  <div class="text-wrapper-2" data-sheet="teams" data-row="6" data-col="12">5</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-ins"></div>
+                  <div class="text-wrapper-3">순위</div>
+                </div>
+                <div class="div-wrapper">
+                  <div class="text-wrapper-2">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="text-wrapper-4">total.</div>
+                  <div class="tot-ins" data-sheet="teams" data-row="6" data-col="8">40,000,000</div>
+                  <div class="text-wrapper-5">원</div>
+                </div>
+                <div class="text-wrapper-6">:</div>
+                <img class="logo-ins" src="img/logo-ins-6.png" />
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="p">Instagram: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="text-wrapper-7">Instagram 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s6-bar1">
+                <canvas id="s6-bar1"></canvas>
+              </div>
+              <div class="chart-slot s6-donut1">
+                <canvas id="s6-donut1"></canvas>
+              </div>
+              <div class="par-ins-wrapper">
+                <div class="ins" data-sheet="teams" data-row="6" data-col="10">Amazon</div>
+              </div>
+              <div class="overlap-6">
+                <div class="text-wrapper-8">모회사</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="2">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="3">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="4">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="5">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="6">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="7">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="8">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="sub-ins" data-sheet="subsidiarys" data-row="6" data-col="9">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-ins-2"></div>
+                <div class="text-wrapper-11">자본</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-ins-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="cpt-ins-wrapper">
+                <div class="ins-2" data-sheet="teams" data-row="6" data-col="2">4,000,000</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-ins-2"></div>
+                <div class="text-wrapper-11">주가</div>
+              </div>
+              <div class="overlap-18">
+                <div class="BG-ins-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="price-ins-wrapper">
+                <div class="ins-2" data-sheet="teams" data-row="6" data-col="4">400,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-7">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="div">
+                  <div class="rect-teamname-ama"></div>
+                  <div class="text-wrapper">Amazon</div>
+                </div>
+                <div class="ama-wrapper">
+                  <div class="text-wrapper-2" data-sheet="teams" data-row="7" data-col="12">6</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-ama"></div>
+                  <div class="text-wrapper-3">순위</div>
+                </div>
+                <div class="div-wrapper">
+                  <div class="text-wrapper-2">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="text-wrapper-4">total.</div>
+                  <div class="tot-ama" data-sheet="teams" data-row="7" data-col="8">30,000,000</div>
+                  <div class="text-wrapper-5">원</div>
+                </div>
+                <div class="text-wrapper-6">:</div>
+                <img class="logo-ama" src="img/logo-ama-7.png" />
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="p">Amazon: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="text-wrapper-7">Amazon 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s7-bar1">
+                <canvas id="s7-bar1"></canvas>
+              </div>
+              <div class="chart-slot s7-donut1">
+                <canvas id="s7-donut1"></canvas>
+              </div>
+              <div class="par-ama-wrapper">
+                <div class="ama" data-sheet="teams" data-row="7" data-col="10">KakaoPay</div>
+              </div>
+              <div class="overlap-6">
+                <div class="text-wrapper-8">모회사</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="2">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="3">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="4">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="5">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="6">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="7">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="8">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="sub-ama" data-sheet="subsidiarys" data-row="7" data-col="9">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-ama-2"></div>
+                <div class="text-wrapper-11">자본</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-ama-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="cpt-ama-wrapper">
+                <div class="ama-2" data-sheet="teams" data-row="7" data-col="2">3,000,000</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-ama-2"></div>
+                <div class="text-wrapper-11">주가</div>
+              </div>
+              <div class="overlap-18">
+                <div class="BG-ama-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="price-ama-wrapper">
+                <div class="ama-2" data-sheet="teams" data-row="7" data-col="4">300,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-8">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="div">
+                  <div class="rect-teamname-kak"></div>
+                  <div class="text-wrapper">KakaoPay</div>
+                </div>
+                <div class="kak-wrapper">
+                  <div class="text-wrapper-2" data-sheet="teams" data-row="8" data-col="12">7</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-kak"></div>
+                  <div class="text-wrapper-3">순위</div>
+                </div>
+                <div class="div-wrapper">
+                  <div class="text-wrapper-2">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="text-wrapper-4">total.</div>
+                  <div class="tot-kak" data-sheet="teams" data-row="8" data-col="8">20,000,000</div>
+                  <div class="text-wrapper-5">원</div>
+                </div>
+                <div class="text-wrapper-6">:</div>
+                <img class="logo-kak" src="img/logo-kak-8.png" />
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="p">KakaoPay: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="text-wrapper-7">KakaoPay 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s8-bar1">
+                <canvas id="s8-bar1"></canvas>
+              </div>
+              <div class="chart-slot s8-donut1">
+                <canvas id="s8-donut1"></canvas>
+              </div>
+              <div class="par-kak-wrapper">
+                <div class="kak" data-sheet="teams" data-row="8" data-col="10">NAVER</div>
+              </div>
+              <div class="overlap-6">
+                <div class="text-wrapper-8">모회사</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="2">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="3">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="4">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="5">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="6">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="7">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="8">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="sub-kak" data-sheet="subsidiarys" data-row="8" data-col="9">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-kak-2"></div>
+                <div class="text-wrapper-11">자본</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-kak-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="cpt-kak-wrapper">
+                <div class="kak-2" data-sheet="teams" data-row="8" data-col="2">2,000,000</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-kak-2"></div>
+                <div class="text-wrapper-11">주가</div>
+              </div>
+              <div class="overlap-18">
+                <div class="BG-kak-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="price-kak-wrapper">
+                <div class="kak-2" data-sheet="teams" data-row="8" data-col="4">200,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <section id="slide-9">
+
+        <div class="box">
+          <div class="slide">
+            <div class="overlap-group">
+              <div class="overlap">
+                <div class="div">
+                  <div class="rect-teamname-nav"></div>
+                  <div class="text-wrapper">NAVER</div>
+                </div>
+                <div class="nav-wrapper">
+                  <div class="text-wrapper-2" data-sheet="teams" data-row="9" data-col="12">8</div>
+                </div>
+                <div class="overlap-2">
+                  <div class="BG-nav"></div>
+                  <div class="text-wrapper-3">순위</div>
+                </div>
+                <div class="div-wrapper">
+                  <div class="text-wrapper-2">위</div>
+                </div>
+                <div class="overlap-3">
+                  <div class="text-wrapper-4">total.</div>
+                  <div class="tot-nav" data-sheet="teams" data-row="9" data-col="8">10,000,000</div>
+                  <div class="text-wrapper-5">원</div>
+                </div>
+                <div class="text-wrapper-6">:</div>
+                <img class="logo-nav" src="img/logo-nav-9.png" />
+              </div>
+              <div class="overlap-4">
+                <div class="div-2"></div>
+                <p class="p">NAVER: 전체 주식 지분 구조</p>
+              </div>
+              <div class="overlap-5">
+                <div class="div-2"></div>
+                <div class="text-wrapper-7">NAVER 팀의 보유 주식</div>
+              </div>
+              <div class="chart-slot s9-bar1">
+                <canvas id="s9-bar1"></canvas>
+              </div>
+              <div class="chart-slot s9-donut1">
+                <canvas id="s9-donut1"></canvas>
+              </div>
+              <div class="par-nav-wrapper">
+                <div class="nav" data-sheet="teams" data-row="9" data-col="10">OpenAI</div>
+              </div>
+              <div class="overlap-6">
+                <div class="text-wrapper-8">모회사</div>
+              </div>
+              <div class="overlap-7">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="2">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-8">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="3">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-9">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="4">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-10">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="5">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-11">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="6">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-12">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="7">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-13">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="8">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-14">
+                <div class="sub-nav" data-sheet="subsidiarys" data-row="9" data-col="9">자회사</div>
+                <div class="text-wrapper-9">[</div>
+                <div class="text-wrapper-10">]</div>
+              </div>
+              <div class="overlap-15">
+                <div class="BG-nav-2"></div>
+                <div class="text-wrapper-11">자본</div>
+              </div>
+              <div class="overlap-16">
+                <div class="BG-nav-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="cpt-nav-wrapper">
+                <div class="nav-2" data-sheet="teams" data-row="9" data-col="2">1,000,000</div>
+              </div>
+              <div class="overlap-17">
+                <div class="BG-nav-2"></div>
+                <div class="text-wrapper-11">주가</div>
+              </div>
+              <div class="overlap-18">
+                <div class="BG-nav-3"></div>
+                <div class="text-wrapper-11">원</div>
+              </div>
+              <div class="price-nav-wrapper">
+                <div class="nav-2" data-sheet="teams" data-row="9" data-col="4">100,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </div>
+  <script src="https://unpkg.com/reveal.js/dist/reveal.js"></script>
+  <script>
+    Reveal.initialize({
+      width: 900,
+      height: 625,
+      margin: 0,
+      center: false,
+      minScale: 1,
+      maxScale: 1,
+      transition: 'none',
+      touch: true,
+      hash: true,
+      controls: true
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="/chart.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="./event_handler.js"></script>
+</body>
+
+</html>
+
+<script>
+  // 팀원 코드가 따로 있으면 아래 두 함수 대신 팀원 함수로 호출만 바꿔.
+  function initBar(canvas, labels = [], data = []) {
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: '#4da3ff' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { display: false }, border: { display: false } },
+          y: { grid: { display: false }, border: { display: false } }
+        }
+      }
+    });
+  }
+
+  function initDoughnut(canvas, labels = [], data = []) {
+    new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels, datasets: [{
+          data,
+          backgroundColor: ['#ABF2E0', '#F2ABAB', '#AFDFFF', '#FFC8E8', '#F9C696', '#FFEF80', '#C2F2AB', '#FFFFFF'],
+          borderColor: '#333', borderWidth: 1, hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '52%',
+        plugins: { legend: { display: false }, tooltip: { enabled: false } }
+      }
+    });
+  }
+
+  // === 슬라이드2만 예시(더미 데이터). 3~9도 동일 패턴으로 한 줄씩 추가 ===
+
+  // slide-3~9
+  // const b3 = document.getElementById('s3-bar1'); if (b3) initBar(b3, [...], [...]);
+  // const d3 = document.getElementById('s3-donut1'); if (d3) initDoughnut(d3, [...], [...]);
+  //});
+</script>

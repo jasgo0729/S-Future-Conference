@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BP 모의투자 - 관리자 마스터 대시보드</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght=400;500;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+
+        /* 💡 Reveal.js 환경 및 전역 리셋 오염 방지 세팅 */
+        .admin-modal-overlay {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            z-index: 999999 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <header class="flex justify-between items-center bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
+            <div>
+                <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                    <span class="text-indigo-400">🛠️</span> 관리자 마스터 대시보드
+                </h1>
+                <p class="text-sm text-gray-400 mt-1">대회 진행 상태 제어 및 실시간 자산 모니터링 시스템</p>
+            </div>
+            <div class="flex items-center gap-2 bg-emerald-950/50 border border-emerald-500/30 rounded-full px-4 py-1.5 text-xs font-semibold text-emerald-400">
+                <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                실시간 소켓 서버 연결됨
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-indigo-400">📈</span> 빅게임(Main Game) 제어
+                    </h2>
+                    <span id="biggame-status" class="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded font-medium">대기 중</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="controlBigGame('start')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-indigo-900/20 transition-all cursor-pointer">
+                        ▶️ 빅게임 수집 시작
+                    </button>
+                    <button onclick="controlBigGame('stop')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-amber-900/20 transition-all cursor-pointer">
+                        ⏸️ 수집 일시정지
+                    </button>
+                </div>
+
+                <div class="pt-2 border-t border-gray-800">
+                    <button onclick="resetBigGameOrders()" class="w-full bg-gray-800 hover:bg-red-950/40 border border-gray-700 hover:border-red-900/50 text-gray-300 hover:text-red-400 font-semibold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                        🔄 수집된 주문 내역 초기화 (Reset)
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div class="border-b border-gray-800 pb-3">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-amber-400">🎯</span> 미니게임 결과 반영
+                    </h2>
+                </div>
+                <div class="grid grid-cols-3 gap-3 items-end">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 mb-1.5">현재 라운드</label>
+                        <input type="number" id="mini-round" value="1" class="w-full bg-gray-950 border border-gray-700 rounded-xl p-2.5 text-sm font-bold text-center text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-gray-400 mb-1.5">등수 입력 (콤마 구분)</label>
+                        <input type="text" id="mini-winners" placeholder="예: A, D, E" class="w-full bg-gray-950 border border-gray-700 rounded-xl p-2.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <button onclick="submitMiniGame()" class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 rounded-xl text-sm shadow-md transition-all cursor-pointer">
+                    🥇 미니게임 결과 전송 및 자동 정산
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-gray-800 pb-3">
+                <div class="space-y-1">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        👥 실시간 팀 정보 및 데이터 수동 조정
+                    </h2>
+                    <p class="text-xs text-gray-400 font-medium">💡 수정하고 싶은 팀의 <b class="text-indigo-400">보유 현금</b>이나 <b class="text-emerald-400">주가</b> 셀을 클릭하면 간편 수정 패널이 열립니다.</p>
+                </div>
+                <button onclick="refreshTeamData()"
+                        class="self-start sm:self-center bg-gray-800 hover:bg-gray-700 border border-gray-700 active:scale-[0.98] text-gray-200 font-semibold px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-md">
+                    🔄 팀 정보 새로고침
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-800 text-gray-400 font-semibold text-xs bg-gray-950/50">
+                            <th class="p-3.5">팀 ID</th>
+                            <th class="p-3.5">팀 이름</th>
+                            <th class="p-3.5 text-right">보유 현금 (클릭 시 수정)</th>
+                            <th class="p-3.5 text-right">주가(Price) (클릭 시 수정)</th>
+                            <th class="p-3.5">모회사 관계</th>
+                            <th class="p-3.5">종속 자회사</th>
+                            <th class="p-3.5 text-center">강매 제어 액션</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-table-body" class="divide-y divide-gray-850 font-medium text-gray-300">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-gray-950 text-gray-300 rounded-2xl p-5 border border-gray-850 font-mono text-xs space-y-2 shadow-inner">
+            <div class="text-gray-500 font-bold border-b border-gray-900 pb-2 mb-2 flex justify-between">
+                <span>🖥️ SYSTEM REALTIME LOG CONSOLE</span>
+                <span class="text-indigo-400 animate-pulse">● LIVE</span>
+            </div>
+            <div id="log-box" class="h-32 overflow-y-auto space-y-1 scrollbar-thin">
+                <div class="text-gray-500">[00:00:00] 시스템이 준비되었습니다. 웹소켓 대기 중...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="edit-value-modal" class="admin-modal-overlay hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 relative">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[3px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full"></div>
+
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-md font-bold text-white flex items-center gap-2">
+                    <span id="modal-target-title-icon">✏️</span> <span id="modal-target-team-display" class="text-indigo-400">A팀</span> 데이터 강제 조정
+                </h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-white transition-colors cursor-pointer text-xl">&times;</button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label id="modal-input-label" class="block text-xs text-gray-400 mb-1.5 font-medium">조정할 새 수치 입력</label>
+                    <div class="relative">
+                        <input type="number" id="modal-edit-input-field"
+                               class="w-full bg-gray-950 border border-gray-700 rounded-xl p-3 text-lg font-bold font-mono text-white focus:outline-none focus:border-indigo-500 transition-all pr-12">
+                        <span id="modal-input-unit-display" class="absolute right-4 top-3.5 text-sm font-bold text-gray-500">원</span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-gray-500 leading-relaxed">
+                    ※ 관리자가 확인을 누르면 판다스 메모리 동기화 데이터프레임이 즉시 수정되며, 전용 슬라이드 전광판 화면도 실시간 동기화 업데이트 처리됩니다.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="closeEditModal()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2.5 rounded-xl text-sm transition-all cursor-pointer">
+                    취소
+                </button>
+                <button onclick="submitValueAdjustment()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm shadow-lg transition-all cursor-pointer">
+                    수정치 반영 (Emit)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io.connect('http://localhost:3003', {
+            path: '/socket.io',
+            transports: ['websocket']
+        });
+
+        // 글로벌 수정 인덱스 홀더
+        let currentEditingTeamId = null;
+        let currentEditingTargetType = null; // 'capital' 또는 'price'
+
+        const mockTeamsData = [
+            { Team: "A", "team name": "OpenAI", capital: 2500000, price: 12000, parent: "X", subsidiary: ["B", "C"] },
+            { Team: "B", "team name": "Tesla", capital: 1200000, price: 10000, parent: "A", subsidiary: [] },
+            { Team: "C", "team name": "삼성전자", capital: 980000, price: 9500, parent: "A", subsidiary: [] },
+            { Team: "D", "team name": "Palantir", capital: 3100000, price: 15000, parent: "X", subsidiary: [] }
+        ];
+
+        window.onload = () => {
+            renderTeamTable(mockTeamsData);
+        };
+
+        function renderTeamTable(teams) {
+            const tbody = document.getElementById('team-table-body');
+            tbody.innerHTML = '';
+
+            teams.forEach(team => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-800/30 transition-all text-gray-300 border-b border-gray-850";
+
+                let subsidiaryBadges = '<span class="text-gray-600 font-normal text-xs">-</span>';
+                if (team.subsidiary && team.subsidiary.length > 0) {
+                    subsidiaryBadges = team.subsidiary.map(sub =>
+                        `<span class="inline-flex items-center px-2 py-0.5 mr-1 text-xs font-semibold bg-indigo-950/50 text-indigo-400 rounded-md border border-indigo-900/50">${sub}팀</span>`
+                    ).join('');
+                }
+
+                let actionButton = '';
+                if (team.parent !== 'X') {
+                    actionButton = `
+                        <button onclick="requestForcedTrade('${team.Team}')"
+                                class="bg-rose-950/50 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 font-bold px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer">
+                            🚨 모회사 대상 강매 호출
+                        </button>
+                    `;
+                } else {
+                    actionButton = `<span class="text-xs text-gray-500 font-normal">권한 없음 (독립 기업)</span>`;
+                }
+
+                const parentText = team.parent !== 'X'
+                    ? `<span class="text-amber-400 font-bold bg-amber-950/50 border border-amber-900/50 px-2 py-0.5 rounded text-xs">${team.parent}팀의 자회사</span>`
+                    : '<span class="text-gray-500">독립 기업</span>';
+
+                tr.innerHTML = `
+                    <td class="p-3.5 font-bold text-white">${team.Team}</td>
+                    <td class="p-3.5 font-semibold text-gray-400">${team['team name']}</td>
+
+                    <td onclick="openEditValueModal('${team.Team}', 'capital', ${team.capital})"
+                        class="p-3.5 text-right font-mono text-indigo-400 font-bold hover:bg-indigo-950/40 hover:text-indigo-300 rounded-xl transition-all cursor-pointer select-none">
+                        💰 ${team.capital.toLocaleString()}원
+                    </td>
+
+                    <td onclick="openEditValueModal('${team.Team}', 'price', ${team.price})"
+                        class="p-3.5 text-right font-mono text-emerald-400 font-bold hover:bg-emerald-950/40 hover:text-emerald-300 rounded-xl transition-all cursor-pointer select-none">
+                        📈 ${team.price.toLocaleString()}원
+                    </td>
+
+                    <td class="p-3.5">${parentText}</td>
+                    <td class="p-3.5">${subsidiaryBadges}</td>
+                    <td class="p-3.5 text-gray-400 flex items-center justify-center">${actionButton}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 💡 [신규 구현] 수동 새로고침 요구 패킷 송신 함수
+        function refreshTeamData() {
+            printSystemLog("🔄 [SYSTEM] 관리자가 강제 현황판 업데이트를 요청했습니다. 최신 시냅스 데이터를 호출합니다.");
+            socket.emit("request_scoreboard_refresh", {});
+        }
+
+        // 클릭 시 데이터 세팅 수정 팝업 오픈 제어부
+        function openEditValueModal(teamId, targetType, currentVal) {
+            currentEditingTeamId = teamId;
+            currentEditingTargetType = targetType;
+
+            const modal = document.getElementById('edit-value-modal');
+            const teamDisplay = document.getElementById('modal-target-team-display');
+            const inputLabel = document.getElementById('modal-input-label');
+            const iconDisplay = document.getElementById('modal-target-title-icon');
+            const inputField = document.getElementById('modal-edit-input-field');
+
+            teamDisplay.innerText = `${teamId}팀 (${targetType === 'capital' ? '현금 자산' : '보유 주가'})`;
+            inputField.value = currentVal;
+
+            if (targetType === 'capital') {
+                iconDisplay.innerText = "💰";
+                inputLabel.innerText = "강제 변동 및 확정할 새 보유 현금 잔액 입력";
+            } else {
+                iconDisplay.innerText = "📈";
+                inputLabel.innerText = "강제 변동 및 확정할 새 1주당 가치(주가) 입력";
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => inputField.select(), 50);
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-value-modal').classList.add('hidden');
+            currentEditingTeamId = null;
+            currentEditingTargetType = null;
+        }
+
+        // 수정 완료 데이터를 소켓 파이프라인으로 전송
+        function submitValueAdjustment() {
+            const newValueRaw = document.getElementById('modal-edit-input-field').value;
+            const newValue = parseInt(newValueRaw);
+
+            if (isNaN(newValue) || newValue < 0) {
+                return alert("0 이상의 올바른 숫자를 명시해 주세요.");
+            }
+
+            printSystemLog(`[⚙️ 관리자 권한 조정] ${currentEditingTeamId}팀의 ${currentEditingTargetType === 'capital' ? '보유 자산' : '시장 주가'} 데이터를 [${newValue.toLocaleString()}원]으로 수동 변경 요청합니다.`);
+
+            socket.emit("manual_team_data_adjustment", {
+                team_id: currentEditingTeamId,
+                field: currentEditingTargetType,
+                value: newValue
+            });
+
+            closeEditModal();
+        }
+
+        // 강매 호출
+        function requestForcedTrade(childId) {
+            socket.emit("send_force_trade_request", {id: childId})
+        }
+
+        // 빅게임 원격 제어
+        function controlBigGame(action) {
+            socket.emit("control_biggame", { action: action });
+        }
+
+        // 빅게임 데이터 리셋
+        function resetBigGameOrders() {
+            const doubleCheck = confirm("⚠️ [경고] 현재까지 누적 수집된 빅게임 주문 데이터 및 판다스 매핑 버퍼 인덱스를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.");
+            if (doubleCheck) {
+                printSystemLog("🔴 [SYSTEM] 관리자가 누적 주문 데이터 리셋 시그널을 백엔드로 송신했습니다.");
+                socket.emit("reset_orders", {});
+            }
+        }
+
+        // 미니게임 결과 반영
+        function submitMiniGame() {
+            const round = document.getElementById('mini-round').value;
+            const winners = document.getElementById('mini-winners').value;
+
+            if (!winners) return alert("등수를 입력해 주세요.");
+
+            printSystemLog(`🎯 [MINI GAME] 제 ${round}라운드 미니게임 승리팀 순위 반영 [${winners}]. 정산 연산을 호출합니다.`);
+            document.getElementById('mini-winners').value = '';
+
+            socket.emit("process_minigame_reward_action", {
+                winners: winners,
+                round: parseInt(round)
+            });
+            socket.emit("check_sabotage_users", {
+                winners: winners
+            });
+        }
+
+        function printSystemLog(message) {
+            const logBox = document.getElementById('log-box');
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            logBox.innerHTML += `<div class="text-gray-300"><span class="text-gray-500">[${timeStr}]</span> ${message}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        socket.on("SYSTEM_LOG", (data) => {
+            printSystemLog(data.message);
+        });
+
+        socket.on("STATUS_UPDATE", (data) => {
+            const statusLabel = document.getElementById('biggame-status');
+            if (data.status === "RUNNING") {
+                statusLabel.innerText = "수집 가동 중";
+                statusLabel.className = "text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-1 rounded font-bold animate-pulse";
+            } else {
+                statusLabel.innerText = "일시 정지";
+                statusLabel.className = "text-xs bg-amber-950 text-amber-400 border border-amber-800 px-2 py-1 rounded font-bold";
+            }
+        });
+
+        socket.on("SCOREBOARD_REFRESH", (data) => {
+            console.log("📊 실시간 자산 현황판 리프레시 수신:", data.data);
+            renderTeamTable(data.data);
+        });
+    </script>
+</body>
+</html>
