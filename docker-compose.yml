@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   server1:
     image: jasgo/sfc_v2:latest
@@ -20,4 +22,24 @@ services:
     container_name: node_server_3
     ports:
       - "3002:3002"
+    restart: always
+
+  # 🛠️ 1. 관리자 마스터 대시보드 (Python 3.14 + FastAPI + Socket.IO)
+  admin:
+    image: jasgo/sfc_admin:latest
+    container_name: python_admin_server
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./V2/data:/app/V2/data  # 💡 engine.py가 바라보는 데이터 디렉토리 직접 동기화
+    restart: always
+
+  # 📉 2. 주식 미니게임 센터 (Node.js Express + XLSX)
+  ministock:
+    image: jasgo/sfc_ministock:latest
+    container_name: node_ministock_server
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./V2/data:/V2/data      # 💡 server.js의 CSV_PATH 상대 경로와 맞물리도록 마운트
     restart: always
