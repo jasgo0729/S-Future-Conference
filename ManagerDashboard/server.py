@@ -263,4 +263,4 @@ def get_team_id_from_sid(sid):
 if __name__ == '__main__':
     import uvicorn
     print("🚀 FastAPI + Socket.IO 마스터 서버 가동... 포트: 3003")
-    uvicorn.run(asgi_app, host="localhost", port=3003)
+    uvicorn.run(asgi_app, host="0.0.0.0", port=3003)

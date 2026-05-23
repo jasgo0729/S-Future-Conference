@@ -18,8 +18,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+RUN mkdir -p /app/V2/data
+
 # 5단계: 앱 소스 전역 복사
 COPY . .
 
+VOLUME [ "../V2/data" ]
+
 # 8단계: uvicorn 서비스 가동 환경설정
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "3003"]
+CMD ["python", "server.py"]
