@@ -25,8 +25,8 @@ function updateCharts(chartsData) {
   }
   
   // 모든 차트 라벨을 고정된 라벨로 덮어쓰기
-  const fixedLabelsBar = ['OpenAI', 'Tesla', '삼성전자', 'Palantir', 'Instagram', 'Amazon', 'KakaoPay', 'NAVER'];
-  const fixedLabelsDoughnut = ['OpenAI', 'Tesla', '삼성전자', 'Palantir', 'Instagram', 'Amazon', 'KakaoPay', 'NAVER','System'];
+  const fixedLabelsBar = ['OpenAI', 'Tesla', '삼성전자', 'Palantir', 'Instagram', 'Amazon', 'Google', 'NVIDIA'];
+  const fixedLabelsDoughnut = ['OpenAI', 'Tesla', '삼성전자', 'Palantir', 'Instagram', 'Amazon', 'Google', 'NVIDIA','System'];
   for (let i = 0; i < 8; i++) {
     // 바 차트 업데이트
     const barCanvas = document.getElementById(`s${i + 2}-bar1`);

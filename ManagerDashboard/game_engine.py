@@ -20,11 +20,11 @@ class BPGameEngine:
         # 시스템 내부 매핑 데이터 상수 [주피터 노트북 로직 기반]
         self.SECRET_KEYS = {
             "1588": "OpenAI", "2424": "Tesla", "3693": "삼성전자", "4885": "Palantir",
-            "5959": "Instagram", "6256": "Amazon", "7749": "KakaoPay", "8881": "NAVER"
+            "5959": "Instagram", "6256": "Amazon", "7749": "Google", "8881": "NVIDIA"
         }
         self.TEAMS_MAP = {
             "OpenAI": "A", "Tesla": "B", "삼성전자": "C", "Palantir": "D",
-            "Instagram": "E", "Amazon": "F", "KakaoPay": "G", "NAVER": "H"
+            "Instagram": "E", "Amazon": "F", "Google": "G", "NVIDIA": "H"
         }
         self.BUY_SELL_MAP = {"매수": "Buy", "매도": "Sell"}
         self.ALL_TEAMS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
