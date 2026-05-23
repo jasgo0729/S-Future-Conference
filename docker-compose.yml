@@ -25,14 +25,14 @@ services:
     restart: always
 
   # 🛠️ 1. 관리자 마스터 대시보드 (Python 3.14 + FastAPI + Socket.IO)
-  admin:
-    image: jasgo/sfc_admin:latest
-    container_name: python_admin_server
-    ports:
-      - "3003:3003"
-    volumes:
-      - ./V2/data:/app/V2/data  # 💡 engine.py가 바라보는 데이터 디렉토리 직접 동기화
-    restart: always
+  # admin:
+  #   image: jasgo/sfc_admin:latest
+  #   container_name: python_admin_server
+  #   ports:
+  #     - "3003:3003"
+  #   volumes:
+  #     - ./V2/data:/app/V2/data  # 💡 engine.py가 바라보는 데이터 디렉토리 직접 동기화
+  #   restart: always
 
   # 📉 2. 주식 미니게임 센터 (Node.js Express + XLSX)
   ministock:
