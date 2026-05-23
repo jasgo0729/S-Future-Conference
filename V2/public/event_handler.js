@@ -1,4 +1,4 @@
-const socket = io.connect('localhost:3003', {
+const socket = io.connect('http://ec2-15-165-202-145.ap-northeast-2.compute.amazonaws.com:3003', {
     path: '/socket.io',
     transports: ['websocket']
 });
