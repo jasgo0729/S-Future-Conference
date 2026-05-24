@@ -192,7 +192,7 @@ class BPGameEngine:
         if parent_id == 'X':
             return False
 
-        total_cost = quantity * self.teams_df.at[child_id, 'price'] * (self.round_num / 2)
+        total_cost = round(quantity * self.teams_df.at[child_id, 'price'] * (self.round_num / 2))
 
         if self.teams_df.at[child_id, 'capital'] < total_cost or self.holdings_df.at[
             parent_id, f'stock{child_id}'] < quantity:
