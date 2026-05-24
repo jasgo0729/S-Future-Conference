@@ -354,6 +354,35 @@ class BPGameEngine:
 
         return logs
 
+    def check_order_validity(self, secret_key_raw: str, trade_type: str, target_id: str,  quantity: int):
+        print(secret_key_raw, trade_type, target_id, quantity)
+        buyer_team_name = self.SECRET_KEYS.get(secret_key_raw, 'X')
+        target_id = self.TEAMS_MAP.get(target_id, 'X')
+        trade_type = self.BUY_SELL_MAP.get(trade_type, 'X')
+
+        if buyer_team_name == 'X':
+            return False, f"❌ [인증 실패] 올바르지 않은 보안키 입력 인입됨. (입력: {secret_key_raw})"
+        buyer_id = self.TEAMS_MAP.get(buyer_team_name, 'X')
+        if buyer_id == 'X' or target_id == 'X' or trade_type == 'X':
+            return False, "❌ [매핑 실패] 팀명 또는 매매 타입 매핑 오류."
+
+        if trade_type == 'Buy':
+            # 1,2라운드 자사주 10주 이상 구매 제한 룰 검증
+            if (self.round_num == 1 or self.round_num == 2) and buyer_id == target_id:
+                if self.no_no_my_stock[buyer_id] + quantity >= 10:
+                    return False, f"🚫 [매수 제한] 1,2R 자사주 10주 이상 보유 금지 규칙 위반 ({buyer_team_name})"
+
+            required_cash = quantity * self.teams_df.loc[target_id, 'price']
+            if self.teams_df.loc[buyer_id, 'capital'] < required_cash:
+                return False, f"❌ [잔고 부족] {buyer_team_name}팀 잔고 부족으로 매수 실패."
+
+            if self.holdings_df.loc['S', f'stock{target_id}'] < quantity:
+                return False, f"❌ [매물 부족] 시스템(S)의 주식이 부족합니다."
+        elif trade_type == 'Sell':
+            if self.holdings_df.loc[buyer_id, f'stock{target_id}'] < quantity:
+                return False, f"❌ [매도 실패] {buyer_team_name}팀이 보유한 주식이 부족합니다."
+        return True, "success"
+
     def check_and_update_subsidaries_and_metrics(self):
         """주문 체결 직후 자회사 여부와 재무 지표를 한 번에 갱신하고 스냅샷을 저장합니다."""
         self.check_and_update_subsidiaries()

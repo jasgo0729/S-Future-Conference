@@ -1,12 +1,14 @@
 import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 import asyncio
 import os
 
 from starlette.responses import FileResponse
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+from pydantic import BaseModel
 
 from game_engine import BPGameEngine
 
@@ -62,6 +64,28 @@ def shutdown_event():
 async def root():
     template_path = "./index.html"
     return FileResponse(template_path)
+
+
+class OrderForm(BaseModel):
+    secret_key: str
+    trade_type: str
+    target_id: str
+    quantity: int
+
+
+@app.post("/check_order")
+async def place_order(order: OrderForm):
+    # 💡 [핵심] 기존에 짜둔 engine.py의 검사 함수를 여기서 그대로 호출!
+    # 예시: check_order_validity(team_id, stock_id, volume) -> (True/False, "사유")
+    is_valid, reason = engine.check_order_validity(order.secret_key, order.trade_type, order.target_id, order.quantity)
+
+    if not is_valid:
+        # 올바르지 않은 주문이면 즉시 400 에러와 함께 사유를 리턴 (프론트엔드로 직행)
+        raise HTTPException(status_code=400, detail=reason)
+    return {
+        "status": "SUCCESS",
+        "message": "주문 검증 통과 및 정상 접수 완결"
+    }
 
 @sio.event
 async def connect(sid, environ):
@@ -239,6 +263,7 @@ class OrderFileWatcherHandler(FileSystemEventHandler):
         # 2. 대시보드로 실시간 로그 콘솔 텍스트 발송
         for log in execution_logs:
             await sio.emit('SYSTEM_LOG', {'message': log})
+            await sio.emit('')
 
             # 만약 빅게임 종료 코드가 감지되었다면 수집 플래그 종료
             if "🛑 [BIG GAME] 빅게임 종료" in log:

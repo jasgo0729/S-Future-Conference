@@ -146,16 +146,16 @@
                 });
                 
                 const result = await response.json();
+
+                if(!response.ok) {
+                    alert(result.message || "오류가 발생했습니다.");
+                    return resetToMainForm(); // 실패 시 원복
+                }
                 
                 // 일부러 정산 인디케이터 연출을 실감 나게 주어 UI 반응 보정 (800ms 딜레이 후 노출)
                 setTimeout(() => {
                     // 2. 대기 스크린 아웃
                     document.getElementById('waiting-screen').classList.add('hidden');
-
-                    if(!response.ok) {
-                        alert(result.message || "오류가 발생했습니다.");
-                        return resetToMainForm(); // 실패 시 원복
-                    }
 
                     // 3. 자산 현황판 바인딩 및 영수증 활성화
                     document.getElementById('display-cash-amount').innerText = `${result.newCash.toLocaleString()}원`;

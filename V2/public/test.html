@@ -241,11 +241,36 @@
         if(confirm(confirmMsg)) {
             console.log("Submit Data:", result);
             sendOrder(result);
-            alert("성공적으로 주문이 접수되었습니다.");
         }
     });
 
     const sendOrder = async (result) => {
+        let orderData = {
+            secret_key: result.securityKey,
+            trade_type: result.orderType,
+            target_id: result.team,
+            quantity: result.quantity
+        };
+        let valid = true;
+        try {
+            const response = await fetch('http://localhost:3003/check_order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                alert(result.detail);
+                valid = false;
+            }
+        } catch (err) {
+            alert("서버 통신 실패");
+            valid = false;
+        }
+        if (!valid) return;
+        alert("성공적으로 주문이 접수되었습니다.");
         const url = `/api/order?securityKey=${result.securityKey}&orderType=${result.orderType}&team=${result.team}&quantity=${result.quantity}`;
         try {
             const response = await fetch(url); // GET 요청 전송
