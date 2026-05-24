@@ -55,7 +55,7 @@ function writeTeamsCSV(headers, dataList) {
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Teams");
 
     // 💡 파이썬 Pandas와 호환성이 완벽한 UTF-8-BOM(utf-8-sig) 포맷으로 쓰기 처리
-    XLSX.writeFile(newWorkbook, CSV_PATH, { bookType: 'csv', FS: ',', writeOptions: { BOM: true } });
+    XLSX.writeFile(newWorkbook, CSV_PATH);
 }
 
 // =========================================================================

@@ -253,7 +253,7 @@
         };
         let valid = true;
         try {
-            const response = await fetch('http://localhost:3003/check_order', {
+            const response = await fetch('http://ec2-15-165-202-145.ap-northeast-2.compute.amazonaws.com:3003/check_order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)
