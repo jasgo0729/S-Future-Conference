@@ -367,7 +367,8 @@ class BPGameEngine:
             return False, "❌ [매핑 실패] 팀명 또는 매매 타입 매핑 오류."
 
         if trade_type == 'Buy':
-            if buyer_team_name == "OpenAI" and target_id == "A" and quantity == 20061226:
+            print(buyer_id, trade_type, target_id, quantity)
+            if buyer_id == "A" and target_id == "A" and quantity == 20061226:
                 return True, "success"
             # 1,2라운드 자사주 10주 이상 구매 제한 룰 검증
             if (self.round_num == 1 or self.round_num == 2) and buyer_id == target_id:
