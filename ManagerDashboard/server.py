@@ -78,7 +78,8 @@ async def place_order(order: OrderForm):
     # 💡 [핵심] 기존에 짜둔 engine.py의 검사 함수를 여기서 그대로 호출!
     # 예시: check_order_validity(team_id, stock_id, volume) -> (True/False, "사유")
     is_valid, reason = engine.check_order_validity(order.secret_key, order.trade_type, order.target_id, order.quantity)
-
+    if not is_biggame_running:
+        raise HTTPException(status_code=400, detail="현재 빅게임 진행중이 아닙니다.")
     if not is_valid:
         # 올바르지 않은 주문이면 즉시 400 에러와 함께 사유를 리턴 (프론트엔드로 직행)
         raise HTTPException(status_code=400, detail=reason)

@@ -9,7 +9,7 @@ class BPGameEngine:
         self.data_dir = data_dir
         self.round_num = 0
         self.last_order_idx = 0  # 기존 주피터의 LastOrder 변수 역할
-        self.no_no_my_stock = {team: 0 for team in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}
+        self.no_no_my_stock = [{team: 0 for team in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']} for _ in range(2)]
         self.log_callback = log_callback
 
         # 백업용 데이터 구조
@@ -312,7 +312,7 @@ class BPGameEngine:
             if trade_type == 'Buy':
                 # 1,2라운드 자사주 10주 이상 구매 제한 룰 검증
                 if (self.round_num == 1 or self.round_num == 2) and buyer_id == target_id:
-                    if self.no_no_my_stock[buyer_id] + quantity >= 10:
+                    if self.no_no_my_stock[self.round_num - 1][buyer_id] + quantity >= 10:
                         logs.append(f"🚫 [매수 제한] 1,2R 자사주 10주 이상 보유 금지 규칙 위반 ({buyer_team_name})")
                         continue
 
@@ -326,8 +326,8 @@ class BPGameEngine:
                     continue
 
                 # 자사주 카운트 누적 및 최종 차감 정산 실행
-                if buyer_id == target_id:
-                    self.no_no_my_stock[buyer_id] += quantity
+                if buyer_id == target_id and (self.round_num == 1 or self.round_num == 2):
+                    self.no_no_my_stock[self.round_num - 1][buyer_id] += quantity
 
                 self.teams_df.loc[buyer_id, 'capital'] -= required_cash
                 self.holdings_df.loc[buyer_id, f'stock{target_id}'] += quantity
@@ -340,8 +340,8 @@ class BPGameEngine:
                     logs.append(f"❌ [매도 실패] {buyer_team_name}팀이 보유한 {order_list[2]} 주식이 부족합니다.")
                     continue
 
-                if buyer_id == target_id:
-                    self.no_no_my_stock[buyer_id] -= quantity
+                if buyer_id == target_id and (self.round_num == 1 or self.round_num == 2):
+                    self.no_no_my_stock[self.round_num - 1][buyer_id] -= quantity
 
                 gain_cash = quantity * self.teams_df.loc[target_id, 'price']
                 self.teams_df.loc[buyer_id, 'capital'] += gain_cash
@@ -372,7 +372,7 @@ class BPGameEngine:
                 return True, "success"
             # 1,2라운드 자사주 10주 이상 구매 제한 룰 검증
             if (self.round_num == 1 or self.round_num == 2) and buyer_id == target_id:
-                if self.no_no_my_stock[buyer_id] + quantity >= 10:
+                if self.no_no_my_stock[self.round_num - 1][buyer_id] + quantity >= 10:
                     return False, f"🚫 [매수 제한] 1,2R 자사주 10주 이상 보유 금지 규칙 위반 ({buyer_team_name})"
 
             required_cash = quantity * self.teams_df.loc[target_id, 'price']
