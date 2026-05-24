@@ -41,6 +41,7 @@ class BPGameEngine:
         """CSV 파일들로부터 핵심 데이터를 메모리에 로드합니다."""
         self.teams_df = pd.read_csv(f"{self.data_dir}/Teams.csv.csv", index_col='Team')
         self.holdings_df = pd.read_csv(f"{self.data_dir}/Holdings.csv.csv", index_col='Team')
+        self.subsidiary_df = pd.read_csv(f"{self.data_dir}/Subsidiarys.csv.csv", index_col='Team')
 
         # subsidiary 컬럼 초기화 및 안전한 리스트 객체화
         self.teams_df['subsidiary'] = self.teams_df['subsidiary'].apply(
@@ -55,6 +56,7 @@ class BPGameEngine:
 
         teams_copy.to_csv(f"{self.data_dir}/Teams.csv.csv")
         self.holdings_df.to_csv(f"{self.data_dir}/Holdings.csv.csv")
+        self.subsidiary_df.to_csv(f"{self.data_dir}/Subsidiarys.csv.csv")
 
     def create_backup(self):
         """현재 라운드의 데이터를 백업 아카이빙합니다."""
@@ -104,6 +106,7 @@ class BPGameEngine:
                     self.log(f"🕊️ [자회사 해방] {self.teams_df.at[child_id, 'team name']}팀이 {parent_id}팀의 지배에서 벗어났습니다.")
                     self.teams_df.at[child_id, 'parent'] = 'X'
                     self.teams_df.at[child_id, 'parent name'] = ' '
+                    self.subsidiary_df.at[self.teams_df.at[child_id, 'parent'], 'Subsidiary' + child_id] = ' '
 
         # 2. 새로운 자회사 편입 검사
         for child_id in self.holdings_df.drop(index=['S']).index:
@@ -116,6 +119,7 @@ class BPGameEngine:
                         self.teams_df.at[child_id, 'parent'] = parent_id
                         self.teams_df.at[child_id, 'parent name'] = self.teams_df.at[parent_id, 'team name']
                         self.teams_df.at[parent_id, 'subsidiary'].append(child_id)
+                        self.subsidiary_df.at[parent_id, 'Subsidiary' + child_id] = '자회사'
                         self.log(
                             f"👑 [자회사 편입] {self.teams_df.at[child_id, 'team name']}팀이 {self.teams_df.at[parent_id, 'team name']}팀의 계열사가 되었습니다.")
 

@@ -14,6 +14,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
   <style>
+    /* 💡 변동형 프리텐다드 폰트를 전역에 확실하게 맵핑 */
+    body {
+      font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+  </style>
+
+  <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght=400;500;600;700&display=swap');
 
     body {
@@ -296,7 +303,17 @@
               <div class="tes-4">주</div>
               <div class="tes-5">100</div>
               <div class="stockslash-tes">/</div>
-              <div class="BG-center"></div>
+              <div class="BG-center" style="
+              display: flex;
+              align-items: center;
+          ">
+              <span id="team_number" style="
+                width: 100%;
+                font-size: 40px;
+                color: white;
+                font-weight: 700;
+                "></span>
+              </div>
               <div class="BG-kak"></div>
               <div class="rect-text-kakaopay"></div>
               <div class="BG-price-kak"></div>
@@ -1272,7 +1289,7 @@
 
 </html>
 
-<script>
+<!-- <script>
   // 팀원 코드가 따로 있으면 아래 두 함수 대신 팀원 함수로 호출만 바꿔.
   function initBar(canvas, labels = [], data = []) {
     new Chart(canvas.getContext('2d'), {
@@ -1312,4 +1329,4 @@
   // const b3 = document.getElementById('s3-bar1'); if (b3) initBar(b3, [...], [...]);
   // const d3 = document.getElementById('s3-donut1'); if (d3) initDoughnut(d3, [...], [...]);
   //});
-</script>
+</script> -->
