@@ -116,6 +116,38 @@ async def process_minigame(sid, data):
     current_scoreboard = engine.get_dashboard_data()
     await sio.emit('SCOREBOARD_REFRESH', {'data': current_scoreboard})
 
+
+@sio.event
+async def rollback_previous_round(sid, data):
+    try:
+        current_round = data.get("current_round", 1)
+        round_to_restore = current_round - 1
+
+        await sio.emit("SYSTEM_LOG", {
+            "message": f"⏪ [롤백 시그널] 관리자({sid})가 {current_round}R에서 {round_to_restore}R 상태로 복구를 요청했습니다."
+        })
+
+        if round_to_restore < 0:
+            await sio.emit("SYSTEM_LOG", {"message": "❌ [롤백 실패] 0라운드 이전의 과거 데이터는 존재하지 않습니다."})
+            return
+
+        is_success = engine.restore_backup(round_to_restore)
+
+        if is_success:
+            engine.round_num = round_to_restore
+            await sio.emit("SCOREBOARD_REFRESH", {"data": engine.get_dashboard_data()})
+            await sio.emit("SYSTEM_LOG", {
+                "message": f"✅ [롤백 성공] 전역 데이터가 제 {round_to_restore}라운드 마감 상태로 복원되었으며, 엔진 라운드가 {round_to_restore}R로 정정되었습니다."
+            })
+        else:
+            await sio.emit("SYSTEM_LOG", {
+                "message": f"❌ [롤백 거부] 백엔드 엔진에 {round_to_restore}R 백업본이 마크되어 있지 않습니다."
+            })
+    except Exception as e:
+        print(f"❌ 롤백 핸들러 내부 크래시: {str(e)}")
+        await sio.emit("SYSTEM_LOG", {"message": f"⚠️ [시스템 오류] 롤백 연산 처리 중 런타임 버그 발생: {str(e)}"})
+
+
 @sio.event
 async def check_sabotage_users(sid, data):
     sabotage_list = engine.check_sabotage(data['winners'])

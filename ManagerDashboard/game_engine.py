@@ -135,8 +135,8 @@ class BPGameEngine:
         rest_teams = list(set(self.ALL_TEAMS) - set(win_list))
         bonus_multiplier = (1.3) ** (self.round_num - 1)
 
-        self.teams_df.at[win_list[0], 'capital'] += round(300000 * bonus_multiplier, -2)
-        self.teams_df.at[win_list[1], 'capital'] += round(200000 * bonus_multiplier, -2)
+        self.teams_df.at[win_list[0], 'capital'] += round(200000 * bonus_multiplier, -2)
+        self.teams_df.at[win_list[1], 'capital'] += round(150000 * bonus_multiplier, -2)
         self.teams_df.at[win_list[2], 'capital'] += round(100000 * bonus_multiplier, -2)
         for t in rest_teams:
             self.teams_df.at[t, 'capital'] += round(50000 * bonus_multiplier, -2)
@@ -213,24 +213,6 @@ class BPGameEngine:
         self.log(f"[ADMIN] {child_id}팀의 강매가 완료되었습니다.")
         return True
 
-    def apply_black_swan_event(self):
-        """3라운드 마감 후 터지는 미국 관세 블랙스완 매크로 이벤트를 적용합니다."""
-        self.log('\n🚨 [BLACK SWAN] 트럼프 보편 관세 선언!')
-        self.teams_df.at['B', 'price'] = round(self.teams_df.at['B', 'price'] * 89 / 100, -1)
-        self.teams_df.at['C', 'price'] = round(self.teams_df.at['C', 'price'] * 93 / 100, -1)
-        self.teams_df.at['D', 'price'] = round(self.teams_df.at['D', 'price'] * 94 / 100, -1)
-        self.teams_df.at['F', 'price'] = round(self.teams_df.at['F', 'price'] * 88 / 100, -1)
-
-        self.teams_df['market capital'] = self.teams_df['price'] * 100
-        self.teams_df['price delta'] = self.teams_df['price'] - self.teams_df['price before']
-
-        mask = self.teams_df['price before'] != 0
-        self.teams_df.loc[mask, 'price ROR'] = round(
-            (self.teams_df.loc[mask, 'price delta'] / self.teams_df.loc[mask, 'price before'] * 100), 1
-        )
-        self.update_financial_metrics()
-        self.save_to_disk()
-
     # =========================================================================
     # 📈 [신규 통합] 빅게임 실시간 주문 파싱 연산 전용 메서드 (ImportTradeOrder 완전 대체)
     # =========================================================================
@@ -301,6 +283,7 @@ class BPGameEngine:
                     )
                 self.update_financial_metrics()
                 self.save_to_disk()
+                self.create_backup()
                 break
 
             # 영문 식별자 ID 매핑

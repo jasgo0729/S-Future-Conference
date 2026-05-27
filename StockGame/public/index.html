@@ -21,13 +21,13 @@
             <div class="text-center">
                 <span class="text-[10px] uppercase font-black tracking-widest bg-amber-50 text-amber-700 border border-amber-200/60 px-3 py-1 rounded-full">Mini-Game Asset Center</span>
                 <h1 class="text-2xl font-black text-gray-900 mt-3">📊 시나리오 주식 투자</h1>
-                <p class="text-xs text-gray-500 mt-1.5">종목을 고르고 베팅 시 실시간 시나리오 정산이 실행됩니다.</p>
+                <p class="text-xs text-gray-500 mt-1.5">보안키를 입력하고 종목을 골라 베팅을 진행하세요.</p>
             </div>
 
-            <div class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center shadow-sm my-2">
+            <div id="cash-display-board" class="hidden bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center shadow-sm my-2 animate-fade-in">
                 <div>
-                    <span class="block text-[11px] text-indigo-600/80 font-bold uppercase tracking-wider">우리 팀 가용 현금</span>
-                    <span id="display-team-id" class="text-sm font-extrabold text-gray-700">A팀 지정 대기</span>
+                    <span id="display-team-id" class="block text-[11px] text-indigo-600/80 font-bold uppercase tracking-wider">우리 팀 가용 현금</span>
+                    <span class="text-xs font-semibold text-gray-500">인증 완료</span>
                 </div>
                 <div class="text-right">
                     <span id="display-cash-amount" class="text-xl font-black text-indigo-600 font-mono">0원</span>
@@ -35,23 +35,20 @@
             </div>
 
             <div class="space-y-4 flex-1 pt-2">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1.5">조(Team) 선택</label>
-                        <select id="select-team" onchange="fetchCurrentCash()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-xl p-3 text-sm font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
-                            <option value="A">A팀 (OpenAI)</option><option value="B">B팀 (Tesla)</option>
-                            <option value="C">C팀 (삼성전자)</option><option value="D">D팀 (Palantir)</option>
-                            <option value="E">E팀 (Instagram)</option><option value="F">F팀 (Amazon)</option>
-                            <option value="G">G팀 (KakaoPay)</option><option value="H">H팀 (NAVER)</option>
-                        </select>
+                        <label class="block text-xs font-bold text-gray-600 mb-1.5">팀 보안키(Secret Key) 입력</label>
+                        <input type="password" id="input-secret-key" oninput="checkKeyAndFetchCash()" placeholder="보안키를 입력해 주세요" 
+                            class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-xl p-3.5 text-sm font-bold font-mono focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
                     </div>
+                    
                     <div>
                         <label class="block text-xs font-bold text-gray-600 mb-1.5">투자할 타겟 종목</label>
-                        <select id="select-stock" class="w-full bg-gray-50 border border-gray-300 text-emerald-700 rounded-xl p-3 text-sm font-bold focus:outline-none focus:border-emerald-500 focus:bg-white transition-all">
-                            <option value="A">A종목 (OpenAI)</option><option value="B">B종목 (Tesla)</option>
-                            <option value="C">C종목 (삼성전자)</option><option value="D">D종목 (Palantir)</option>
-                            <option value="E">E종목 (Instagram)</option><option value="F">F종목 (Amazon)</option>
-                            <option value="G">G종목 (KakaoPay)</option><option value="H">H종목 (NAVER)</option>
+                        <select id="select-stock" class="w-full bg-gray-50 border border-gray-300 text-emerald-700 rounded-xl p-3.5 text-sm font-bold focus:outline-none focus:border-emerald-500 focus:bg-white transition-all">
+                            <option value="A">A종목</option><option value="B">B종목</option>
+                            <option value="C">C종목</option><option value="D">D종목</option>
+                            <option value="E">E종목</option><option value="F">F종목</option>
+                            <option value="G">G종목</option>
                         </select>
                     </div>
                 </div>
@@ -90,6 +87,7 @@
                     <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-sans font-bold">정산 완결</span>
                 </h3>
                 <div class="space-y-2 text-gray-600 pt-1">
+                    <div class="flex justify-between"><span>인증 팀 마크:</span><span id="rcpt-team" class="text-indigo-600 font-black">A팀</span></div>
                     <div class="flex justify-between"><span>선택 투자 종목:</span><span id="rcpt-stock" class="text-gray-900 font-bold">A</span></div>
                     <div class="flex justify-between"><span>총 투자 원금:</span><span id="rcpt-invested" class="text-gray-900 font-bold">0원</span></div>
                     <div class="flex justify-between"><span>시나리오 수익률:</span><span id="rcpt-rate" class="text-emerald-600 font-bold">+0%</span></div>
@@ -103,7 +101,7 @@
             </div>
 
             <button onclick="resetToMainForm()" class="w-full bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold py-3 rounded-xl text-xs transition-all cursor-pointer">
-                🔄 다른 조 투자 진행하기 (돌아가기)
+                🔄 확인 완료 (돌아가기)
             </button>
         </div>
 
@@ -111,72 +109,115 @@
 
     <script>
         window.onload = () => {
-            fetchCurrentCash();
-        };
-
-        async function fetchCurrentCash() {
-            const teamId = document.getElementById('select-team').value;
-            try {
-                const response = await fetch(`/api/team-cash/${teamId}`);
-                const data = await response.json();
-                
-                document.getElementById('display-team-id').innerText = `${teamId}팀 현재 가용 자산`;
-                document.getElementById('display-cash-amount').innerText = `${data.cash.toLocaleString()}원`;
-            } catch (err) {
-                console.error("자산 패치 오류:", err);
+            if (localStorage.getItem("submit") == 1) {
+                document.getElementById('main-investment-form').classList.add('hidden');
+                document.getElementById('waiting-screen').classList.remove('hidden');
             }
+        }
+        // 키가 완전히 매칭되었을 때 임시 저장할 전역 변수
+        let verifiedTeamId = null;
+
+        // 💡 디바운싱 타이머를 활용해 키 입력이 끝났을 때 자동 팀 매칭 및 잔고 파싱 실행
+        let typingTimer;
+        function checkKeyAndFetchCash() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(async () => {
+                const secretKey = document.getElementById('input-secret-key').value.trim();
+                if (!secretKey) {
+                    document.getElementById('cash-display-board').classList.add('hidden');
+                    return;
+                }
+
+                try {
+                    // 아까 생성한 FastAPI의 check_order 파이프라인이나 키 검증용 엔드포인트 쿼리
+                    // 여기서는 백엔드가 secretKey를 받아 유효하면 { valid: true, teamId: 'A', cash: 500000 } 형태로 준다고 가정합니다.
+                    const response = await fetch(`/api/verify-key?key=${encodeURIComponent(secretKey)}`);
+                    const data = await response.json();
+
+                    if (response.ok && data.valid) {
+                        verifiedTeamId = data.teamId;
+                        
+                        // 인증 성공 시 상단에 소속 조와 잔고 현황판 오픈
+                        document.getElementById('display-team-id').innerText = `${data.teamName}팀 가용 자산 현황`;
+                        document.getElementById('display-cash-amount').innerText = `${data.cash.toLocaleString()}원`;
+                        document.getElementById('cash-display-board').classList.remove('hidden');
+                    } else {
+                        // 올바르지 않은 키면 현황판 숨김
+                        verifiedTeamId = null;
+                        document.getElementById('cash-display-board').classList.add('hidden');
+                    }
+                } catch (err) {
+                    console.error("키 검증 통신 오류:", err);
+                }
+            }, 300); // 0.3초간 타이핑 멈추면 실행
         }
 
         async function submitInvestment() {
-            const teamId = document.getElementById('select-team').value;
+            const secretKey = document.getElementById('input-secret-key').value.trim();
             const stockId = document.getElementById('select-stock').value;
-            const amount = document.getElementById('input-amount').value;
+            const amountInput = document.getElementById('input-amount').value;
+            const amount = parseInt(amountInput, 10);
 
-            if(!amount || amount <= 0) return alert("정확한 베팅 금액을 입력해 주세요.");
+            if (!secretKey) return alert("⚠️ 팀 보안키를 먼저 입력해 주세요.");
+            if (!verifiedTeamId) return alert("⚠️ 유효하지 않은 보안키입니다. 다시 확인해 주세요.");
 
-            // 1. 폼 가리고 대시보드를 "결과를 기다리는 중..." 화면으로 전환
+            if (amount == 0) {
+                document.getElementById('main-investment-form').classList.add('hidden');
+                document.getElementById('waiting-screen').classList.remove('hidden');
+                localStorage.setItem("submit", 1);
+                return;
+            }
+
+            if (!amount || amount < 0) return alert("⚠️ 정확한 베팅 금액을 입력해 주세요.");
+            if (disabledAmountCheck(amountInput, amount)) return;
+            if (amount > 500000) return alert("베팅은 50만원까지 가능합니다.")
+
+            // 1. 폼 숨기기 및 로딩 대기 스크린 구동
             document.getElementById('main-investment-form').classList.add('hidden');
             document.getElementById('waiting-screen').classList.remove('hidden');
 
             try {
+                // 백엔드 POST 바디 구조에 secretKey를 포함시켜 전송
                 const response = await fetch('/api/invest', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ teamId, stockId, amount })
+                    body: JSON.stringify({ secretKey, teamId: verifiedTeamId, stockId, amount })
                 });
                 
                 const result = await response.json();
 
-                if(!response.ok) {
-                    alert(result.message || "오류가 발생했습니다.");
-                    return resetToMainForm(); // 실패 시 원복
+                if (!response.ok) {
+                    alert(result.detail || result.message || "오류가 발생했습니다.");
+                    return resetToMainForm();
                 }
+
+                localStorage.setItem("submit", 1);
                 
-                // 일부러 정산 인디케이터 연출을 실감 나게 주어 UI 반응 보정 (800ms 딜레이 후 노출)
-                setTimeout(() => {
-                    // 2. 대기 스크린 아웃
-                    document.getElementById('waiting-screen').classList.add('hidden');
+                // setTimeout(() => {
+                //     document.getElementById('waiting-screen').classList.add('hidden');
 
-                    // 3. 자산 현황판 바인딩 및 영수증 활성화
-                    document.getElementById('display-cash-amount').innerText = `${result.newCash.toLocaleString()}원`;
-                    document.getElementById('rcpt-stock').innerText = `${result.targetStock} 종목`;
-                    document.getElementById('rcpt-invested').innerText = `${result.invested.toLocaleString()}원`;
+                //     // 상단 바 현황 최신화
+                //     document.getElementById('display-cash-amount').innerText = `${result.newCash.toLocaleString()}원`;
                     
-                    const isProfit = result.netProfit >= 0;
-                    const rateLabel = document.getElementById('rcpt-rate');
-                    rateLabel.innerText = `${isProfit ? '+' : ''}${result.rate.toFixed(0)}%`;
-                    rateLabel.className = isProfit ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-                    const profitLabel = document.getElementById('rcpt-profit');
-                    profitLabel.innerText = `${isProfit ? '+' : ''}${result.netProfit.toLocaleString()}원`;
-                    profitLabel.className = isProfit ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-
-                    document.getElementById('rcpt-final-cash').innerText = `${result.newCash.toLocaleString()}원`;
+                //     // 영수증 데이터 바인딩
+                //     document.getElementById('rcpt-team').innerText = `${verifiedTeamId}팀`;
+                //     document.getElementById('rcpt-stock').innerText = `${result.targetStock} 종목`;
+                //     document.getElementById('rcpt-invested').innerText = `${result.invested.toLocaleString()}원`;
                     
-                    // 영수증 언락
-                    document.getElementById('receipt-panel').classList.remove('hidden');
-                    document.getElementById('input-amount').value = '';
-                }, 100000000);
+                //     const isProfit = result.netProfit >= 0;
+                //     const rateLabel = document.getElementById('rcpt-rate');
+                //     rateLabel.innerText = `${isProfit ? '+' : ''}${result.rate.toFixed(0)}%`;
+                //     rateLabel.className = isProfit ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+
+                //     const profitLabel = document.getElementById('rcpt-profit');
+                //     profitLabel.innerText = `${isProfit ? '+' : ''}${result.netProfit.toLocaleString()}원`;
+                //     profitLabel.className = isProfit ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+
+                //     document.getElementById('rcpt-final-cash').innerText = `${result.newCash.toLocaleString()}원`;
+                    
+                //     document.getElementById('receipt-panel').classList.remove('hidden');
+                //     document.getElementById('input-amount').value = '';
+                // }, 800);
                 
             } catch (err) {
                 alert("서버 통신 실패");
@@ -184,12 +225,23 @@
             }
         }
 
-        // 초기 화면 복구 헬퍼 함수
+        function disabledAmountCheck(input, parsed) {
+            if (Number(input) !== parsed) {
+                alert("⚠️ 투자금은 정수(원 단위)로만 입력할 수 있습니다.");
+                return true;
+            }
+            return false;
+        }
+
         function resetToMainForm() {
             document.getElementById('waiting-screen').classList.add('hidden');
             document.getElementById('receipt-panel').classList.add('hidden');
             document.getElementById('main-investment-form').classList.remove('hidden');
-            fetchCurrentCash(); // 동기화 자산 리프레시
+            
+            // 리셋 시 보안키 필드 비우고 현황판 초기화
+            document.getElementById('input-secret-key').value = '';
+            document.getElementById('cash-display-board').classList.add('hidden');
+            verifiedTeamId = null;
         }
     </script>
 </body>

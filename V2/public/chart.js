@@ -175,14 +175,15 @@ function drawDoughnutChart(canvas, labels, values) {
     }
 }
 
-window.addEventListener('load', () => {
-    if (window.Chart && window.ChartDataLabels) {
-        Chart.register(outsideValueLabels);
-        Chart.register(window.ChartDataLabels);
-    } else {
-        console.error('Chart.js or ChartDataLabels.js is not loaded yet.');
-    }
-});
+if (window.Chart) {
+    Chart.register(outsideValueLabels);
+    if (window.ChartDataLabels) Chart.register(window.ChartDataLabels);
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.Chart) Chart.register(outsideValueLabels);
+        if (window.ChartDataLabels) Chart.register(window.ChartDataLabels);
+    });
+}
 // 페이지가 로드되면 차트 관련 스타일과 함수, 플러그인을 등록합니다.
 document.addEventListener('DOMContentLoaded', () => {
     // [1] 공통 차트 CSS: 차트 영역 및 폰트 스타일 지정

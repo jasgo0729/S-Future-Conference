@@ -43,9 +43,18 @@ router.get('/data', async (req, res) => {
                 console.warn(`${fileName} 파일이 없습니다.`);
                 return [];
             }
-            const workbook = XLSX.readFile(filePath);
+        
+            // 1. 🔥 파일을 raw 바이너리 버퍼 형태로 먼저 읽어옵니다.
+            // 이렇게 해야 브라우저나 OS 엔진이 마음대로 인코딩을 추측해서 글자를 깨뜨리는 것을 막을 수 있습니다.
+            const fileBuffer = fs.readFileSync(filePath);
+        
+            // 2. 🔥 SheetJS의 read 메서드를 사용하고, type을 'buffer'로 명시합니다.
+            // SheetJS가 버퍼 내부의 인코딩 마커(BOM 등)를 알아서 파악하여 UTF-8로 깔끔하게 파싱합니다.
+            const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+            
             const sheetName = workbook.SheetNames[0]; // 첫 번째 시트 선택
             const sheet = workbook.Sheets[sheetName];
+            
             // header: 1 옵션은 데이터를 이중 배열( [ [], [] ] ) 형태로 반환합니다.
             return XLSX.utils.sheet_to_json(sheet, { header: 1 });
         };

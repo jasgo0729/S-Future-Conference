@@ -55,6 +55,7 @@ async function fetchAndUpdateAllData() {
     // 가져온 데이터로 UI와 차트를 모두 업데이트합니다.
     updateUI(data);
     updateCharts(data.chartsData);
+    console.log(data);
 
   } catch (error) {
     console.error('데이터를 가져오는 데 실패했습니다:', error);

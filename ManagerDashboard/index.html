@@ -80,6 +80,15 @@
                     🥇 미니게임 결과 전송 및 자동 정산
                 </button>
             </div>
+<!--            <div class="pt-3 border-t border-gray-800 grid grid-cols-1 gap-2">-->
+<!--                <div class="flex justify-between items-center px-1">-->
+<!--                    <span class="text-xs text-gray-400 font-medium">잘못 정산했거나 이전 상태로 되돌려야 할 때:</span>-->
+<!--                </div>-->
+<!--                <button onclick="rollbackPreviousRound()"-->
+<!--                        class="w-full bg-red-950/40 hover:bg-red-900/50 border border-red-900/60 hover:border-red-700 text-red-400 hover:text-red-300 font-bold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-inner">-->
+<!--                    ⏪ 긴급 긴급 복구: 이전 라운드 데이터 상태로 롤백 (Undo)-->
+<!--                </button>-->
+<!--            </div>-->
         </div>
 
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -189,7 +198,17 @@
             const tbody = document.getElementById('team-table-body');
             tbody.innerHTML = '';
 
-            teams.forEach(team => {
+            const sortedTeams = [...teams].sort((a, b) => {
+                // 만약 백엔드 객체에 total 필드가 미리 계산되어 넘어온다면 그것을 사용하고,
+                // 없다면 [보유 현금 + 주가 * 100(혹은 기본지분)] 형태로 계산식 변경 유도 (여기서는 우선 1순위로 total 필드 대조)
+                const totalA = a['total asset']
+                const totalB = b['total asset']
+
+                // 내림차순 정렬 (큰 금액이 맨 위로)
+                return totalB - totalA;
+            });
+
+            sortedTeams.forEach(team => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-800/30 transition-all text-gray-300 border-b border-gray-850";
 
@@ -332,6 +351,24 @@
             socket.emit("check_sabotage_users", {
                 winners: winners
             });
+        }
+
+        function rollbackPreviousRound() {
+            const currentRound = document.getElementById('mini-round').value;
+
+            // 실수를 방지하기 위한 관리자 2중 확인 경고창 알림
+            const doubleCheck = confirm(
+                `⚠️ [데이터 롤백 경고]\n\n정말로 현재 현황을 취소하고 직전 라운드 백업 데이터로 복구하시겠습니까?\n이 작업 수행 시 현재 라운드(${currentRound}R)에서 변경된 모든 판다스 잔고와 파일 정보가 이전 기록으로 강제 덮어씌워집니다.`
+            );
+
+            if (doubleCheck) {
+                printSystemLog("🔴 [ROLLBACK SYSTEM] 관리자가 이전 라운드로의 긴급 데이터 데이터 복구 패킷을 전송했습니다. 타임라인 백업본을 복원합니다.");
+
+                // 파이썬 백엔드 엔진이 받아 처리할 전용 이벤트명 에밋
+                socket.emit("rollback_previous_round", {
+                    current_round: parseInt(currentRound)
+                });
+            }
         }
 
         function printSystemLog(message) {
