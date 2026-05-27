@@ -172,7 +172,8 @@ class BPGameEngine:
         parent_id = self.teams_df.at[child_id, 'parent']
 
         bonus_multiplier = (1.3) ** (self.round_num - 1)
-        cost = round((3 - rank) * 100000 * bonus_multiplier, -2)
+        cost = round((4 - rank) * 50000 * bonus_multiplier, -2)
+
         quantity = 0
         if rank == 0:
             quantity = 10
