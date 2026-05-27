@@ -51,6 +51,7 @@ function drawBarChart(canvas, originalLabels, originalValues) {
     if (labels.length === 0 || values.length === 0) return;
 
     if (!canvas._chartInstance) {
+        if (!canvas.clientWidth) return; // 숨겨진 슬라이드(폭 0)면 생성 보류 → 다음 폴링/노출 시 그림
         const ctx = canvas.getContext('2d');
         const remainders = values.map(v => Math.max(0, 100 - v));
         const data = {
@@ -116,6 +117,7 @@ function drawBarChart(canvas, originalLabels, originalValues) {
         chart.data.labels = labels;
         chart.data.datasets[0].data = values;
         chart.data.datasets[1].data = values.map(v => Math.max(0, 100 - v));
+        chart.resize(); // 캐시된 차트의 스테일 너비 교정
         chart.update();
     }
 }
@@ -133,6 +135,7 @@ function drawDoughnutChart(canvas, labels, values) {
     if (labels.length === 0 || values.length === 0) return;
 
     if (!canvas._chartInstance) {
+        if (!canvas.clientWidth) return; // 숨겨진 슬라이드(폭 0)면 생성 보류 → 다음 폴링/노출 시 그림
         const ctx = canvas.getContext('2d');
         const data = {
             labels,
@@ -171,6 +174,7 @@ function drawDoughnutChart(canvas, labels, values) {
         chart.data.labels = labels;
         chart.data.datasets[0].data = numericValues;
         chart.data.datasets[0].backgroundColor = bgColors;
+        chart.resize(); // 캐시된 차트의 스테일 너비 교정
         chart.update();
     }
 }
@@ -195,3 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.drawBarChart = drawBarChart;
     window.drawDoughnutChart = drawDoughnutChart;
 });
+
+// [7] 슬라이드 전환 시, 방금 보이게 된 슬라이드의 차트 크기를 즉시 다시 잡음
+if (window.Reveal) {
+    Reveal.on('slidechanged', () => {
+        document.querySelectorAll('.chart-slot canvas').forEach(c =>
+            c._chartInstance && c._chartInstance.resize());
+    });
+}
