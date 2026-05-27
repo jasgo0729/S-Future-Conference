@@ -104,9 +104,9 @@ class BPGameEngine:
                     if child_id in self.teams_df.at[parent_id, 'subsidiary']:
                         self.teams_df.at[parent_id, 'subsidiary'].remove(child_id)
                     self.log(f"🕊️ [자회사 해방] {self.teams_df.at[child_id, 'team name']}팀이 {parent_id}팀의 지배에서 벗어났습니다.")
+                    self.subsidiary_df.at[self.teams_df.at[child_id, 'parent'], 'Subsidiary' + child_id] = ' '
                     self.teams_df.at[child_id, 'parent'] = 'X'
                     self.teams_df.at[child_id, 'parent name'] = ' '
-                    self.subsidiary_df.at[self.teams_df.at[child_id, 'parent'], 'Subsidiary' + child_id] = ' '
 
         # 2. 새로운 자회사 편입 검사
         for child_id in self.holdings_df.drop(index=['S']).index:
