@@ -39,9 +39,9 @@ class BPGameEngine:
 
     def load_data(self):
         """CSV 파일들로부터 핵심 데이터를 메모리에 로드합니다."""
-        self.teams_df = pd.read_csv(f"{self.data_dir}/Teams.csv.csv", index_col='Team')
-        self.holdings_df = pd.read_csv(f"{self.data_dir}/Holdings.csv.csv", index_col='Team')
-        self.subsidiary_df = pd.read_csv(f"{self.data_dir}/Subsidiarys.csv.csv", index_col='Team')
+        self.teams_df = pd.read_csv(f"{self.data_dir}/Teams.csv.csv", index_col='Team', encoding='utf-8-sig')
+        self.holdings_df = pd.read_csv(f"{self.data_dir}/Holdings.csv.csv", index_col='Team', encoding='utf-8-sig')
+        self.subsidiary_df = pd.read_csv(f"{self.data_dir}/Subsidiarys.csv.csv", index_col='Team', encoding='utf-8-sig')
 
         # subsidiary 컬럼 초기화 및 안전한 리스트 객체화
         self.teams_df['subsidiary'] = self.teams_df['subsidiary'].apply(
@@ -54,9 +54,9 @@ class BPGameEngine:
         teams_copy['subsidiary'] = teams_copy['subsidiary'].apply(
             lambda x: ','.join(x) if isinstance(x, list) else str(x))
 
-        teams_copy.to_csv(f"{self.data_dir}/Teams.csv.csv", encoding='utf-8')
-        self.holdings_df.to_csv(f"{self.data_dir}/Holdings.csv.csv", encoding='utf-8')
-        self.subsidiary_df.to_csv(f"{self.data_dir}/Subsidiarys.csv.csv", encoding='utf-8')
+        teams_copy.to_csv(f"{self.data_dir}/Teams.csv.csv", encoding='utf-8-sig')
+        self.holdings_df.to_csv(f"{self.data_dir}/Holdings.csv.csv", encoding='utf-8-sig')
+        self.subsidiary_df.to_csv(f"{self.data_dir}/Subsidiarys.csv.csv", encoding='utf-8-sig')
 
     def create_backup(self):
         """현재 라운드의 데이터를 백업 아카이빙합니다."""
