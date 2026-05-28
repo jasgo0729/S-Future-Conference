@@ -168,6 +168,7 @@ async def check_sabotage_users(sid, data):
 async def request_scoreboard_refresh(sid, data):
     engine.load_data()
     engine.update_financial_metrics()
+    engine.save_to_disk()
     current_scoreboard = engine.get_dashboard_data()
     await sio.emit('SCOREBOARD_REFRESH', {'data': current_scoreboard})
 
