@@ -1,5 +1,6 @@
 // public/chart.js
 document.getElementById("team_number").innerText = localStorage.getItem("user_number");
+
 const chartStyle = document.createElement('style');
 chartStyle.innerHTML = `
 

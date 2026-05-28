@@ -167,6 +167,7 @@ async def check_sabotage_users(sid, data):
 @sio.event
 async def request_scoreboard_refresh(sid, data):
     engine.load_data()
+    engine.update_financial_metrics()
     current_scoreboard = engine.get_dashboard_data()
     await sio.emit('SCOREBOARD_REFRESH', {'data': current_scoreboard})
 
@@ -191,6 +192,7 @@ async def manual_team_data_adjustment(sid, data):
             # 주가나 자산 컬럼명에 매칭 (CSV 파일 내 컬럼명이 대문자나 공백이 있다면
             # 그에 맞춰 engine 내부 데이터 구조 컬럼 룰에 맞게 포워딩됩니다)
             engine.teams_df.at[team_id, field] = int(new_value)
+            engine.update_financial_metrics()
             engine.save_to_disk()
             # 2. 콘솔 메시지 백엔드 내부 및 대시보드 로거로 브로드캐스트
             log_msg = f"⚙️ [ADMIN HARD MOD] {team_id}팀의 {field} 수치가 관리자에 의해 {new_value:,}원으로 수동 갱신되었습니다."
@@ -247,6 +249,7 @@ async def force_trade_response(sid, data):
 async def process_sabotage(sid, data):
     result = bool(data['result'])
     if not result:
+        await sio.emit('SYSTEM_LOG', {'message': f"[ADMIN] {get_team_id_from_sid(sid)}팀의 사보타지가 취소되었습니다."})
         return
     rank = data['rank']
     id = data['id']
