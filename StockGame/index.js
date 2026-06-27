@@ -14,8 +14,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // 🎬 [고정 시나리오] 종목별 수익률 배당표
 const STOCK_SCENARIO = {
-    "A": 0.7, "B": 0.5, "C": 0.3, "D": 1.3,
-    "E": 1.5, "F": 1.7
+    "A": 1.5, "B": 0.3, "C": 0.5, "D": 0.7,
+    "E": 1.3, "F": 1.7
 };
 
 // 🔐 실시간 팀 매칭용 마스터 보안키 설정
