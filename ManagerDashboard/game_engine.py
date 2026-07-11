@@ -1,71 +1,151 @@
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
 import pandas as pd
-import numpy as np
-import os
-from typing import List, Dict, Any, Optional
+
+
+CSV_ENCODING = "utf-8-sig"
+SYSTEM_TEAM_ID = "S"
+ACTIVE_TEAM_IDS = ("A", "B", "C", "D", "E", "F", "G", "H")
+SUBSIDIARY_CONTROL_THRESHOLD = 51
+END_GAME_QUANTITY = 20061226
+
+
+@dataclass(frozen=True)
+class TradeOrder:
+    secret_key: str
+    trade_type_label: str
+    target_team_name: str
+    quantity: int
+    row_index: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class ResolvedTradeOrder:
+    buyer_team_name: str
+    buyer_team_id: str
+    trade_action: str
+    target_team_name: str
+    target_team_id: str
+    quantity: int
+    row_index: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class TradeValidationResult:
+    is_valid: bool
+    message: str
+    order: Optional[ResolvedTradeOrder] = None
+    is_end_game_signal: bool = False
 
 
 class BPGameEngine:
-    def __init__(self, data_dir: str = "../V2/data", log_callback=None):
-        self.data_dir = data_dir
+    """Main settlement engine for S-Future-Conference manager operations."""
+
+    SECRET_KEY_TO_TEAM_NAME = {
+        "1588": "OpenAI",
+        "2424": "Tesla",
+        "3693": "삼성전자",
+        "4885": "Palantir",
+        "5959": "Instagram",
+        "6256": "Amazon",
+        "7749": "Google",
+        "8881": "NVIDIA",
+    }
+    TEAM_NAME_TO_ID = {
+        "OpenAI": "A",
+        "Tesla": "B",
+        "삼성전자": "C",
+        "Palantir": "D",
+        "Instagram": "E",
+        "Amazon": "F",
+        "Google": "G",
+        "NVIDIA": "H",
+    }
+    TRADE_TYPE_TO_ACTION = {"매수": "Buy", "매도": "Sell"}
+    MINIGAME_BASE_REWARDS = (200000, 150000, 100000)
+    MINIGAME_PARTICIPATION_REWARD = 50000
+    SUBSIDIARY_DIVIDEND_PER_TEAM = 200000
+    SABOTAGE_STOCK_REWARDS = (10, 5, 3)
+
+    def __init__(self, data_dir: str = "../V2/data", log_callback: Optional[Callable[[str], None]] = None):
+        self.data_dir = Path(data_dir)
         self.round_num = 0
-        self.last_order_idx = 0  # 기존 주피터의 LastOrder 변수 역할
-        self.no_no_my_stock = [{team: 0 for team in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']} for _ in range(2)]
+        self.last_order_idx = 0
+        self.self_stock_purchase_counts = self._new_self_stock_purchase_counts()
         self.log_callback = log_callback
 
-        # 백업용 데이터 구조
         self.teams_history: Dict[int, pd.DataFrame] = {}
         self.holdings_history: Dict[int, pd.DataFrame] = {}
         self.last_order_history: List[int] = []
 
-        # 시스템 내부 매핑 데이터 상수 [주피터 노트북 로직 기반]
-        self.SECRET_KEYS = {
-            "1588": "OpenAI", "2424": "Tesla", "3693": "삼성전자", "4885": "Palantir",
-            "5959": "Instagram", "6256": "Amazon", "7749": "Google", "8881": "NVIDIA"
-        }
-        self.TEAMS_MAP = {
-            "OpenAI": "A", "Tesla": "B", "삼성전자": "C", "Palantir": "D",
-            "Instagram": "E", "Amazon": "F", "Google": "G", "NVIDIA": "H"
-        }
-        self.BUY_SELL_MAP = {"매수": "Buy", "매도": "Sell"}
-        self.ALL_TEAMS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        # Backward-compatible public attributes used by server.py and older scripts.
+        self.SECRET_KEYS = self.SECRET_KEY_TO_TEAM_NAME
+        self.TEAMS_MAP = self.TEAM_NAME_TO_ID
+        self.BUY_SELL_MAP = self.TRADE_TYPE_TO_ACTION
+        self.ALL_TEAMS = list(ACTIVE_TEAM_IDS)
+        self.no_no_my_stock = self.self_stock_purchase_counts
 
         self.load_data()
 
-    def log(self, message: str):
+    # ------------------------------------------------------------------
+    # Logging and CSV persistence
+    # ------------------------------------------------------------------
+    def log(self, message: str) -> None:
         print(message)
-
         if self.log_callback:
             self.log_callback(message)
 
-    def load_data(self):
-        """CSV 파일들로부터 핵심 데이터를 메모리에 로드합니다."""
-        self.teams_df = pd.read_csv(f"{self.data_dir}/Teams.csv.csv", index_col='Team', encoding='utf-8-sig')
-        self.holdings_df = pd.read_csv(f"{self.data_dir}/Holdings.csv.csv", index_col='Team', encoding='utf-8-sig')
-        self.subsidiary_df = pd.read_csv(f"{self.data_dir}/Subsidiarys.csv.csv", index_col='Team', encoding='utf-8-sig')
+    def load_data(self) -> None:
+        """Load shared CSV files into memory."""
+        self.teams_df = pd.read_csv(self._csv_path("Teams.csv.csv"), index_col="Team", encoding=CSV_ENCODING)
+        self.holdings_df = pd.read_csv(self._csv_path("Holdings.csv.csv"), index_col="Team", encoding=CSV_ENCODING)
+        self.subsidiary_df = pd.read_csv(self._csv_path("Subsidiarys.csv.csv"), index_col="Team", encoding=CSV_ENCODING)
+        self.teams_df["subsidiary"] = self.teams_df["subsidiary"].apply(self._parse_subsidiary_cell)
 
-        # subsidiary 컬럼 초기화 및 안전한 리스트 객체화
-        self.teams_df['subsidiary'] = self.teams_df['subsidiary'].apply(
-            lambda x: [] if pd.isna(x) or str(x).strip() in ['', 'X', '[]', 'nan'] else str(x).split(',')
-        )
+    def save_to_disk(self) -> None:
+        """Persist the in-memory state back to the shared CSV files."""
+        teams_to_save = self.teams_df.copy()
+        teams_to_save["subsidiary"] = teams_to_save["subsidiary"].apply(self._serialize_subsidiary_cell)
 
-    def save_to_disk(self):
-        """현재 메모리의 상태를 CSV 파일로 저장합니다."""
-        teams_copy = self.teams_df.copy()
-        teams_copy['subsidiary'] = teams_copy['subsidiary'].apply(
-            lambda x: ','.join(x) if isinstance(x, list) else str(x))
+        teams_to_save.to_csv(self._csv_path("Teams.csv.csv"), encoding=CSV_ENCODING)
+        self.holdings_df.to_csv(self._csv_path("Holdings.csv.csv"), encoding=CSV_ENCODING)
+        self.subsidiary_df.to_csv(self._csv_path("Subsidiarys.csv.csv"), encoding=CSV_ENCODING)
 
-        teams_copy.to_csv(f"{self.data_dir}/Teams.csv.csv", encoding='utf-8-sig')
-        self.holdings_df.to_csv(f"{self.data_dir}/Holdings.csv.csv", encoding='utf-8-sig')
-        self.subsidiary_df.to_csv(f"{self.data_dir}/Subsidiarys.csv.csv", encoding='utf-8-sig')
+    def _csv_path(self, filename: str) -> Path:
+        return self.data_dir / filename
 
-    def create_backup(self):
-        """현재 라운드의 데이터를 백업 아카이빙합니다."""
+    @staticmethod
+    def _parse_subsidiary_cell(value: Any) -> List[str]:
+        if pd.isna(value) or str(value).strip() in {"", "X", "[]", "nan"}:
+            return []
+        return [team_id.strip() for team_id in str(value).split(",") if team_id.strip()]
+
+    @staticmethod
+    def _serialize_subsidiary_cell(value: Any) -> str:
+        if isinstance(value, list):
+            return ",".join(value)
+        return "" if pd.isna(value) else str(value)
+
+    @staticmethod
+    def _new_self_stock_purchase_counts() -> List[Dict[str, int]]:
+        return [{team_id: 0 for team_id in ACTIVE_TEAM_IDS} for _ in range(2)]
+
+    def _active_team_index(self, frame: pd.DataFrame) -> pd.Index:
+        return frame.index.drop(SYSTEM_TEAM_ID, errors="ignore")
+
+    # ------------------------------------------------------------------
+    # Round snapshots and financial settlement
+    # ------------------------------------------------------------------
+    def create_backup(self) -> None:
+        """Store the current round state for in-process rollback."""
         self.teams_history[self.round_num] = self.teams_df.copy()
         self.holdings_history[self.round_num] = self.holdings_df.copy()
         self.last_order_history.append(self.last_order_idx)
 
     def restore_backup(self, round_to_restore: int) -> bool:
-        """지정한 과거 라운드 시점으로 데이터를 완벽하게 롤백 복원합니다."""
+        """Restore a previously archived round state."""
         if round_to_restore not in self.teams_history:
             self.log(f"❌ {round_to_restore} 라운드의 백업 데이터가 존재하지 않습니다.")
             return False
@@ -78,351 +158,389 @@ class BPGameEngine:
         self.log(f"🔄 {round_to_restore} 라운드 마감 시점으로 데이터 롤백 완료.")
         return True
 
-    def update_financial_metrics(self):
-        """보유 주식 가치를 계산하여 총자산(Total Asset)과 순위를 일괄 갱신합니다."""
-        for team_id in self.teams_df.drop(index=['S']).index:
-            stock_asset_sum = 0
-            for stock_id in self.holdings_df.drop(index=['S']).index:
-                holding_amount = self.holdings_df.at[team_id, f'stock{stock_id}']
-                stock_price = self.teams_df.at[stock_id, 'price']
+    def update_financial_metrics(self) -> None:
+        """Recalculate total assets and ranking from current cash, prices, and holdings."""
+        team_ids = self._active_team_index(self.teams_df)
+        stock_ids = self._active_team_index(self.holdings_df)
 
-                holding_amount = 0 if pd.isna(holding_amount) else holding_amount
-                stock_price = 0 if pd.isna(stock_price) else stock_price
+        for team_id in team_ids:
+            stock_asset_sum = 0
+            for stock_id in stock_ids:
+                holding_amount = self._safe_number(self.holdings_df.at[team_id, f"stock{stock_id}"])
+                stock_price = self._safe_number(self.teams_df.at[stock_id, "price"])
                 stock_asset_sum += holding_amount * stock_price
 
-            self.teams_df.at[team_id, 'total asset'] = stock_asset_sum + self.teams_df.at[team_id, 'capital']
+            self.teams_df.at[team_id, "total asset"] = stock_asset_sum + self.teams_df.at[team_id, "capital"]
 
-        self.teams_df['team rank'] = self.teams_df['total asset'].rank(method='min', ascending=False).astype(int)
+        self.teams_df["team rank"] = self.teams_df["total asset"].rank(method="min", ascending=False).astype(int)
 
-    def check_and_update_subsidiaries(self):
-        """지분율을 검사하여 자회사 편입 및 해방 규칙을 일괄 연산합니다."""
-        # 1. 자회사 해방 검사
-        for child_id in self.teams_df.drop(index=['S']).index:
-            parent_id = self.teams_df.at[child_id, 'parent']
-            if parent_id != 'X':
-                if self.holdings_df.at[parent_id, f'stock{child_id}'] < 51:
-                    if child_id in self.teams_df.at[parent_id, 'subsidiary']:
-                        self.teams_df.at[parent_id, 'subsidiary'].remove(child_id)
-                    self.log(f"🕊️ [자회사 해방] {self.teams_df.at[child_id, 'team name']}팀이 {parent_id}팀의 지배에서 벗어났습니다.")
-                    self.subsidiary_df.at[self.teams_df.at[child_id, 'parent'], 'Subsidiary' + child_id] = ' '
-                    self.teams_df.at[child_id, 'parent'] = 'X'
-                    self.teams_df.at[child_id, 'parent name'] = ' '
+    @staticmethod
+    def _safe_number(value: Any) -> float:
+        return 0 if pd.isna(value) else value
 
-        # 2. 새로운 자회사 편입 검사
-        for child_id in self.holdings_df.drop(index=['S']).index:
-            for parent_id in self.holdings_df.drop(index=['S']).index:
+    def update_subsidiary_relationships(self) -> None:
+        """Apply subsidiary acquisition and release rules from current holdings."""
+        self._release_uncontrolled_subsidiaries()
+        self._acquire_new_subsidiaries()
+
+    def refresh_state_after_settlement(self) -> None:
+        """Refresh ownership, financial metrics, and shared CSV files after a state change."""
+        self.update_subsidiary_relationships()
+        self.update_financial_metrics()
+        self.save_to_disk()
+
+    def _release_uncontrolled_subsidiaries(self) -> None:
+        for child_id in self._active_team_index(self.teams_df):
+            parent_id = self.teams_df.at[child_id, "parent"]
+            if parent_id == "X":
+                continue
+
+            controlled_stock = self.holdings_df.at[parent_id, f"stock{child_id}"]
+            if controlled_stock >= SUBSIDIARY_CONTROL_THRESHOLD:
+                continue
+
+            if child_id in self.teams_df.at[parent_id, "subsidiary"]:
+                self.teams_df.at[parent_id, "subsidiary"].remove(child_id)
+
+            self.log(f"🕊️ [자회사 해방] {self.teams_df.at[child_id, 'team name']}팀이 {parent_id}팀의 지배에서 벗어났습니다.")
+            self.subsidiary_df.at[parent_id, "Subsidiary" + child_id] = " "
+            self.teams_df.at[child_id, "parent"] = "X"
+            self.teams_df.at[child_id, "parent name"] = " "
+
+    def _acquire_new_subsidiaries(self) -> None:
+        team_ids = self._active_team_index(self.holdings_df)
+        for child_id in team_ids:
+            if self.teams_df.at[child_id, "parent"] != "X":
+                continue
+
+            for parent_id in team_ids:
                 if parent_id == child_id:
                     continue
-                if self.holdings_df.at[parent_id, f'stock{child_id}'] >= 51 and self.teams_df.at[
-                    child_id, 'parent'] == 'X':
-                    if child_id not in self.teams_df.at[parent_id, 'subsidiary']:
-                        self.teams_df.at[child_id, 'parent'] = parent_id
-                        self.teams_df.at[child_id, 'parent name'] = self.teams_df.at[parent_id, 'team name']
-                        self.teams_df.at[parent_id, 'subsidiary'].append(child_id)
-                        self.subsidiary_df.at[parent_id, 'Subsidiary' + child_id] = '자회사'
-                        self.log(
-                            f"👑 [자회사 편입] {self.teams_df.at[child_id, 'team name']}팀이 {self.teams_df.at[parent_id, 'team name']}팀의 계열사가 되었습니다.")
 
+                controlled_stock = self.holdings_df.at[parent_id, f"stock{child_id}"]
+                if controlled_stock < SUBSIDIARY_CONTROL_THRESHOLD:
+                    continue
+
+                self.teams_df.at[child_id, "parent"] = parent_id
+                self.teams_df.at[child_id, "parent name"] = self.teams_df.at[parent_id, "team name"]
+                if child_id not in self.teams_df.at[parent_id, "subsidiary"]:
+                    self.teams_df.at[parent_id, "subsidiary"].append(child_id)
+                self.subsidiary_df.at[parent_id, "Subsidiary" + child_id] = "자회사"
+                self.log(
+                    f"👑 [자회사 편입] {self.teams_df.at[child_id, 'team name']}팀이 "
+                    f"{self.teams_df.at[parent_id, 'team name']}팀의 계열사가 되었습니다."
+                )
+                break
+
+    # ------------------------------------------------------------------
+    # Mini-game, sabotage, and forced trade rules
+    # ------------------------------------------------------------------
     def process_minigame_reward(self, winners_input: str, current_round: int) -> bool:
-        """미니게임 순위를 반영하여 라운드 기본금 및 자회사 배당 보너스를 정산합니다."""
+        """Settle rank rewards, participation rewards, and subsidiary dividends."""
         self.round_num = current_round
-        win_list = [w.strip() for w in winners_input.split(',')]
-
-        if len(win_list) != 3 or not set(win_list).issubset(set(self.ALL_TEAMS)):
-            self.log("❌ 입력 형식이 잘못되었습니다. 정산을 취소합니다.")
+        winning_team_ids = self._parse_winning_team_ids(winners_input)
+        if winning_team_ids is None:
             return False
 
-        rest_teams = list(set(self.ALL_TEAMS) - set(win_list))
-        bonus_multiplier = (1.3) ** (self.round_num - 1)
-
-        self.teams_df.at[win_list[0], 'capital'] += round(200000 * bonus_multiplier, -2)
-        self.teams_df.at[win_list[1], 'capital'] += round(150000 * bonus_multiplier, -2)
-        self.teams_df.at[win_list[2], 'capital'] += round(100000 * bonus_multiplier, -2)
-        for t in rest_teams:
-            self.teams_df.at[t, 'capital'] += round(50000 * bonus_multiplier, -2)
-
-        self.check_and_update_subsidiaries()
-
-        for team_id in self.teams_df.drop(index=['S']).index:
-            subs_count = len(self.teams_df.at[team_id, 'subsidiary'])
-            if subs_count > 0:
-                dividend = 200000 * subs_count
-                self.teams_df.at[team_id, 'capital'] += dividend
-                self.log(f"💰 [배당금] {self.teams_df.at[team_id, 'team name']}팀에게 자회사 보너스 {dividend:,}원이 지급되었습니다.")
-
+        reward_multiplier = 1.3 ** (self.round_num - 1)
+        self._grant_minigame_rank_rewards(winning_team_ids, reward_multiplier)
+        self._grant_minigame_participation_rewards(winning_team_ids, reward_multiplier)
+        self.update_subsidiary_relationships()
+        self._grant_subsidiary_dividends()
         self.update_financial_metrics()
         self.save_to_disk()
         return True
 
-    def check_sabotage(self, winners_input: str):
-        result = []
-        win_list = [w.strip() for w in winners_input.split(',')]
+    def find_sabotage_candidates(self, winners_input: str) -> List[tuple[str, int]]:
+        """Return winning teams that can sabotage their parent company."""
+        winning_team_ids = self._parse_winning_team_ids(winners_input)
+        if winning_team_ids is None:
+            return []
 
-        if len(win_list) != 3 or not set(win_list).issubset(set(self.ALL_TEAMS)):
-            self.log("❌ 입력 형식이 잘못되었습니다. 정산을 취소합니다.")
-            return False
-
-        for i in range(3):
-            if self.teams_df.at[win_list[i], 'parent'] == 'X':
-                continue
-            result.append((win_list[i], i))
-        return result
+        return [
+            (team_id, rank)
+            for rank, team_id in enumerate(winning_team_ids)
+            if self.teams_df.at[team_id, "parent"] != "X"
+        ]
 
     def execute_sabotage(self, child_id: str, rank: int) -> bool:
-        parent_id = self.teams_df.at[child_id, 'parent']
+        parent_id = self.teams_df.at[child_id, "parent"]
+        reward_quantity = self.SABOTAGE_STOCK_REWARDS[rank]
+        cost = round((4 - rank) * 50000 * (1.3 ** (self.round_num - 1)), -2)
 
-        bonus_multiplier = (1.3) ** (self.round_num - 1)
-        cost = round((4 - rank) * 50000 * bonus_multiplier, -2)
+        self.teams_df.at[child_id, "capital"] -= cost
+        self.holdings_df.at[child_id, f"stock{child_id}"] += reward_quantity
+        self.holdings_df.at[parent_id, f"stock{child_id}"] -= reward_quantity
 
-        quantity = 0
-        if rank == 0:
-            quantity = 10
-        elif rank == 1:
-            quantity = 5
-        elif rank == 2:
-            quantity = 3
-        self.teams_df.at[child_id, 'capital'] -= cost
-        self.holdings_df.at[child_id, f'stock{child_id}'] += quantity
-        self.holdings_df.at[parent_id, f'stock{child_id}'] -= quantity
-
-        self.check_and_update_subsidiaries()
-        self.update_financial_metrics()
-        self.save_to_disk()
+        self.refresh_state_after_settlement()
         self.log(f"[ADMIN] {child_id}팀의 사보타지가 완료되었습니다.")
         return True
 
     def execute_forced_trade(self, child_id: str, quantity: int) -> bool:
-        """모회사의 자사주 물량을 자회사에게 강제 매각 처리합니다."""
-        parent_id = self.teams_df.at[child_id, 'parent']
-        if parent_id == 'X':
+        """Force a parent company to sell the child's stock back to the child."""
+        parent_id = self.teams_df.at[child_id, "parent"]
+        if parent_id == "X":
             return False
 
-        total_cost = round(quantity * self.teams_df.at[child_id, 'price'] * (self.round_num / 2))
-
-        if self.teams_df.at[child_id, 'capital'] < total_cost or self.holdings_df.at[
-            parent_id, f'stock{child_id}'] < quantity:
+        total_cost = round(quantity * self.teams_df.at[child_id, "price"] * (self.round_num / 2))
+        if self.teams_df.at[child_id, "capital"] < total_cost:
+            return False
+        if self.holdings_df.at[parent_id, f"stock{child_id}"] < quantity:
             return False
 
-        self.teams_df.at[child_id, 'capital'] -= total_cost
-        self.teams_df.at[parent_id, 'capital'] += total_cost
-        self.holdings_df.at[child_id, f'stock{child_id}'] += quantity
-        self.holdings_df.at[parent_id, f'stock{child_id}'] -= quantity
+        self.teams_df.at[child_id, "capital"] -= total_cost
+        self.teams_df.at[parent_id, "capital"] += total_cost
+        self.holdings_df.at[child_id, f"stock{child_id}"] += quantity
+        self.holdings_df.at[parent_id, f"stock{child_id}"] -= quantity
 
-        self.check_and_update_subsidiaries()
-        self.update_financial_metrics()
-        self.save_to_disk()
+        self.refresh_state_after_settlement()
         self.log(f"[ADMIN] {child_id}팀의 강매가 완료되었습니다.")
         return True
 
-    # =========================================================================
-    # 📈 [신규 통합] 빅게임 실시간 주문 파싱 연산 전용 메서드 (ImportTradeOrder 완전 대체)
-    # =========================================================================
+    def _parse_winning_team_ids(self, winners_input: str) -> Optional[List[str]]:
+        winning_team_ids = [team_id.strip() for team_id in winners_input.split(",")]
+        if len(winning_team_ids) != 3 or not set(winning_team_ids).issubset(ACTIVE_TEAM_IDS):
+            self.log("❌ 입력 형식이 잘못되었습니다. 정산을 취소합니다.")
+            return None
+        return winning_team_ids
+
+    def _grant_minigame_rank_rewards(self, winning_team_ids: List[str], reward_multiplier: float) -> None:
+        for team_id, base_reward in zip(winning_team_ids, self.MINIGAME_BASE_REWARDS):
+            self.teams_df.at[team_id, "capital"] += round(base_reward * reward_multiplier, -2)
+
+    def _grant_minigame_participation_rewards(self, winning_team_ids: List[str], reward_multiplier: float) -> None:
+        for team_id in set(ACTIVE_TEAM_IDS) - set(winning_team_ids):
+            self.teams_df.at[team_id, "capital"] += round(self.MINIGAME_PARTICIPATION_REWARD * reward_multiplier, -2)
+
+    def _grant_subsidiary_dividends(self) -> None:
+        for team_id in self._active_team_index(self.teams_df):
+            subsidiary_count = len(self.teams_df.at[team_id, "subsidiary"])
+            if subsidiary_count == 0:
+                continue
+
+            dividend = self.SUBSIDIARY_DIVIDEND_PER_TEAM * subsidiary_count
+            self.teams_df.at[team_id, "capital"] += dividend
+            self.log(f"💰 [배당금] {self.teams_df.at[team_id, 'team name']}팀에게 자회사 보너스 {dividend:,}원이 지급되었습니다.")
+
+    # ------------------------------------------------------------------
+    # Big-game trade order parsing, validation, and execution
+    # ------------------------------------------------------------------
     def parse_and_execute_orders(self) -> List[str]:
-        """
-        주문 CSV 파일을 읽어 들여 아직 처리하지 않은 새로운 주문(LastOrder 이후)을
-        순차적으로 파싱하고 금융 연산을 수행합니다.
-        처리된 로그 메시지 리스트를 반환하여 웹소켓 콘솔로 쏠 수 있게 합니다.
-        """
-        logs = []
-        csv_path = f"{self.data_dir}/BP_TradeOrder.csv"
-
-        if not os.path.exists(csv_path):
+        """Process new rows from BP_TradeOrder.csv after last_order_idx."""
+        logs: List[str] = []
+        trade_order_df = self._load_trade_order_csv()
+        if trade_order_df is None or trade_order_df.empty:
             return logs
 
-        trade_order_df = pd.read_csv(csv_path)
-        if trade_order_df.empty:
-            return logs
+        while self.last_order_idx < len(trade_order_df):
+            row_index = self.last_order_idx
+            order_result = self._trade_order_from_csv_row(trade_order_df.iloc[row_index], row_index)
+            self.last_order_idx += 1
 
-        # 처리할 새로운 주문이 있는지 인덱스 검사
-        while trade_order_df.index[-1] >= self.last_order_idx:
-            order_series = trade_order_df.iloc[self.last_order_idx]
-            self.last_order_idx += 1  # 처리 인덱스 1 증가
-
-            # 결측치 예외 처리
-            if order_series[1:].isnull().any():
-                logs.append(f"⚠️ [주문 패스] 빈 주문이 감지되어 건너뜁니다. (인덱스: {self.last_order_idx - 1})")
+            if isinstance(order_result, str):
+                logs.append(order_result)
                 continue
 
-            order_list = order_series.tolist()
-            order_list.pop(0)  # 첫 번째 요소(인덱스) 제거
-
-            # 수량 정수 변환 및 예외 검증
-            try:
-                quantity = int(float(order_list[3]))
-            except (ValueError, TypeError):
-                logs.append(f"⚠️ [주문 패스] 수량 오류로 건너뜁니다. (값: {order_list[3]})")
+            validation = self.validate_trade_order(order_result)
+            if not validation.is_valid:
+                logs.append(validation.message)
                 continue
 
-            if quantity <= 0:
-                logs.append(f"⚠️ [주문 패스] 수량이 0 이하입니다. (수량: {quantity})")
-                continue
-
-            # 🔐 보안키 및 매핑 검증 단계
-            secret_key_raw = str(order_list[0])
-            buyer_team_name = self.SECRET_KEYS.get(secret_key_raw, 'X')
-
-            if buyer_team_name == 'X':
-                logs.append(f"❌ [인증 실패] 올바르지 않은 보안키 입력 인입됨. (입력: {secret_key_raw})")
-                continue
-
-            # 빅게임 마감 종료 코드 감지 (A, Buy, A, 20061226)
-            if buyer_team_name == "OpenAI" and order_list[1] == "매수" and order_list[
-                2] == "OpenAI" and quantity == 20061226:
+            if validation.is_end_game_signal:
                 logs.append("🛑 [BIG GAME] 빅게임 종료 코드가 수신되었습니다.")
-
-                # 라운드 최종 주가 변동 공식 대입 (빅게임 마감 정산)
-                self.teams_df['price before'] = self.teams_df['price']
-                self.teams_df['price'] = self.teams_df['price'] + (self.teams_df['capital'] / 100).astype(int)
-                self.teams_df['market capital'] = self.teams_df['price'] * 100
-
-                if self.round_num != 3:
-                    self.teams_df['price delta'] = self.teams_df['price'] - self.teams_df['price before']
-                    self.teams_df['price ROR'] = 0.0
-                    mask = self.teams_df['price before'] != 0
-                    self.teams_df.loc[mask, 'price ROR'] = round(
-                        (self.teams_df.loc[mask, 'price delta'] / self.teams_df.loc[mask, 'price before'] * 100), 1
-                    )
-                self.update_financial_metrics()
-                self.save_to_disk()
-                self.create_backup()
+                self._finalize_big_game_round()
                 break
 
-            # 영문 식별자 ID 매핑
-            buyer_id = self.TEAMS_MAP.get(buyer_team_name, 'X')
-            target_id = self.TEAMS_MAP.get(order_list[2], 'X')
-            trade_type = self.BUY_SELL_MAP.get(order_list[1], 'X')
-
-            if buyer_id == 'X' or target_id == 'X' or trade_type == 'X':
-                logs.append("❌ [매핑 실패] 팀명 또는 매매 타입 매핑 오류로 주문을 건너뜁니다.")
-                continue
-
-            # 🛒 매수(Buy) 연산 프로세스
-            if trade_type == 'Buy':
-                # 1,2라운드 자사주 10주 이상 구매 제한 룰 검증
-                if (self.round_num == 1 or self.round_num == 2) and buyer_id == target_id:
-                    if self.no_no_my_stock[self.round_num - 1][buyer_id] + quantity >= 10:
-                        logs.append(f"🚫 [매수 제한] 1,2R 자사주 10주 이상 보유 금지 규칙 위반 ({buyer_team_name})")
-                        continue
-
-                required_cash = quantity * self.teams_df.loc[target_id, 'price']
-                if self.teams_df.loc[buyer_id, 'capital'] < required_cash:
-                    logs.append(f"❌ [잔고 부족] {buyer_team_name}팀 잔고 부족으로 매수 실패.")
-                    continue
-
-                if self.holdings_df.loc['S', f'stock{target_id}'] < quantity:
-                    logs.append(f"❌ [매물 부족] 시스템(S)의 {order_list[2]} 주식이 부족합니다.")
-                    continue
-
-                # 자사주 카운트 누적 및 최종 차감 정산 실행
-                if buyer_id == target_id and (self.round_num == 1 or self.round_num == 2):
-                    self.no_no_my_stock[self.round_num - 1][buyer_id] += quantity
-
-                self.teams_df.loc[buyer_id, 'capital'] -= required_cash
-                self.holdings_df.loc[buyer_id, f'stock{target_id}'] += quantity
-                self.holdings_df.loc['S', f'stock{target_id}'] -= quantity
-                logs.append(f"🟩 [매수 체결] {buyer_team_name}팀 -> {order_list[2]} {quantity}주 매수 완료.")
-
-            # 🏷️ 매도(Sell) 연산 프로세스
-            elif trade_type == 'Sell':
-                if self.holdings_df.loc[buyer_id, f'stock{target_id}'] < quantity:
-                    logs.append(f"❌ [매도 실패] {buyer_team_name}팀이 보유한 {order_list[2]} 주식이 부족합니다.")
-                    continue
-
-                if buyer_id == target_id and (self.round_num == 1 or self.round_num == 2):
-                    self.no_no_my_stock[self.round_num - 1][buyer_id] -= quantity
-
-                gain_cash = quantity * self.teams_df.loc[target_id, 'price']
-                self.teams_df.loc[buyer_id, 'capital'] += gain_cash
-                self.holdings_df.loc[buyer_id, f'stock{target_id}'] -= quantity
-                self.holdings_df.loc['S', f'stock{target_id}'] += quantity
-                logs.append(f"🟥 [매도 체결] {buyer_team_name}팀 -> {order_list[2]} {quantity}주 매도 완료.")
-
-            # 관계성 및 자산 총액 실시간 변동 리프레시
-            self.check_and_update_subsidaries_and_metrics()
+            logs.append(self._execute_trade_order(validation.order))
+            self.refresh_state_after_settlement()
 
         return logs
 
-    def check_order_validity(self, secret_key_raw: str, trade_type: str, target_id: str,  quantity: int):
-        print(secret_key_raw, trade_type, target_id, quantity)
-        buyer_team_name = self.SECRET_KEYS.get(secret_key_raw, 'X')
-        target_id = self.TEAMS_MAP.get(target_id, 'X')
-        trade_type = self.BUY_SELL_MAP.get(trade_type, 'X')
+    def validate_trade_order(self, order: TradeOrder) -> TradeValidationResult:
+        """Validate and resolve a raw order without mutating game state."""
+        if order.quantity <= 0:
+            return TradeValidationResult(False, f"⚠️ [주문 패스] 수량이 0 이하입니다. (수량: {order.quantity})")
 
-        if buyer_team_name == 'X':
-            return False, f"❌ [인증 실패] 올바르지 않은 보안키 입력 인입됨. (입력: {secret_key_raw})"
-        buyer_id = self.TEAMS_MAP.get(buyer_team_name, 'X')
-        if buyer_id == 'X' or target_id == 'X' or trade_type == 'X':
-            return False, "❌ [매핑 실패] 팀명 또는 매매 타입 매핑 오류."
+        buyer_team_name = self.SECRET_KEY_TO_TEAM_NAME.get(str(order.secret_key), "X")
+        if buyer_team_name == "X":
+            return TradeValidationResult(False, f"❌ [인증 실패] 올바르지 않은 보안키 입력 인입됨. (입력: {order.secret_key})")
 
-        if trade_type == 'Buy':
-            print(buyer_id, trade_type, target_id, quantity)
-            if buyer_id == "A" and target_id == "A" and quantity == 20061226:
-                return True, "success"
-            # 1,2라운드 자사주 10주 이상 구매 제한 룰 검증
-            if (self.round_num == 1 or self.round_num == 2) and buyer_id == target_id:
-                if self.no_no_my_stock[self.round_num - 1][buyer_id] + quantity >= 10:
-                    return False, f"🚫 [매수 제한] 1,2R 자사주 10주 이상 보유 금지 규칙 위반 ({buyer_team_name})"
+        buyer_team_id = self.TEAM_NAME_TO_ID.get(buyer_team_name, "X")
+        target_team_id = self.TEAM_NAME_TO_ID.get(order.target_team_name, "X")
+        trade_action = self.TRADE_TYPE_TO_ACTION.get(order.trade_type_label, "X")
+        if buyer_team_id == "X" or target_team_id == "X" or trade_action == "X":
+            return TradeValidationResult(False, "❌ [매핑 실패] 팀명 또는 매매 타입 매핑 오류.")
 
-            required_cash = quantity * self.teams_df.loc[target_id, 'price']
-            if self.teams_df.loc[buyer_id, 'capital'] < required_cash:
-                return False, f"❌ [잔고 부족] {buyer_team_name}팀 잔고 부족으로 매수 실패."
+        resolved_order = ResolvedTradeOrder(
+            buyer_team_name=buyer_team_name,
+            buyer_team_id=buyer_team_id,
+            trade_action=trade_action,
+            target_team_name=order.target_team_name,
+            target_team_id=target_team_id,
+            quantity=order.quantity,
+            row_index=order.row_index,
+        )
+        if self._is_big_game_end_signal(resolved_order):
+            return TradeValidationResult(True, "success", resolved_order, is_end_game_signal=True)
 
-            if self.holdings_df.loc['S', f'stock{target_id}'] < quantity:
-                return False, f"❌ [매물 부족] 시스템(S)의 주식이 부족합니다."
-        elif trade_type == 'Sell':
-            if self.holdings_df.loc[buyer_id, f'stock{target_id}'] < quantity:
-                return False, f"❌ [매도 실패] {buyer_team_name}팀이 보유한 주식이 부족합니다."
-        return True, "success"
+        if trade_action == "Buy":
+            return self._validate_buy_order(resolved_order)
+        return self._validate_sell_order(resolved_order)
 
-    def check_and_update_subsidaries_and_metrics(self):
-        """주문 체결 직후 자회사 여부와 재무 지표를 한 번에 갱신하고 스냅샷을 저장합니다."""
-        self.check_and_update_subsidiaries()
+    def check_order_validity(self, secret_key_raw: str, trade_type: str, target_id: str, quantity: int):
+        """Compatibility wrapper for the HTTP order validation route."""
+        validation = self.validate_trade_order(TradeOrder(str(secret_key_raw), trade_type, target_id, int(quantity)))
+        return validation.is_valid, validation.message
+
+    def _load_trade_order_csv(self) -> Optional[pd.DataFrame]:
+        trade_order_path = self._csv_path("BP_TradeOrder.csv")
+        if not trade_order_path.exists():
+            return None
+        return pd.read_csv(trade_order_path, encoding=CSV_ENCODING)
+
+    def _trade_order_from_csv_row(self, order_row: pd.Series, row_index: int) -> TradeOrder | str:
+        if order_row.iloc[1:].isnull().any():
+            return f"⚠️ [주문 패스] 빈 주문이 감지되어 건너뜁니다. (인덱스: {row_index})"
+
+        try:
+            quantity = int(float(order_row.iloc[4]))
+        except (ValueError, TypeError):
+            return f"⚠️ [주문 패스] 수량 오류로 건너뜁니다. (값: {order_row.iloc[4]})"
+
+        return TradeOrder(
+            secret_key=str(order_row.iloc[1]),
+            trade_type_label=order_row.iloc[2],
+            target_team_name=order_row.iloc[3],
+            quantity=quantity,
+            row_index=row_index,
+        )
+
+    def _validate_buy_order(self, order: ResolvedTradeOrder) -> TradeValidationResult:
+        if self._violates_self_stock_limit(order):
+            return TradeValidationResult(
+                False,
+                f"🚫 [매수 제한] 1,2R 자사주 10주 이상 보유 금지 규칙 위반 ({order.buyer_team_name})",
+            )
+
+        required_cash = order.quantity * self.teams_df.loc[order.target_team_id, "price"]
+        if self.teams_df.loc[order.buyer_team_id, "capital"] < required_cash:
+            return TradeValidationResult(False, f"❌ [잔고 부족] {order.buyer_team_name}팀 잔고 부족으로 매수 실패.")
+
+        if self.holdings_df.loc[SYSTEM_TEAM_ID, f"stock{order.target_team_id}"] < order.quantity:
+            return TradeValidationResult(False, f"❌ [매물 부족] 시스템(S)의 {order.target_team_name} 주식이 부족합니다.")
+
+        return TradeValidationResult(True, "success", order)
+
+    def _validate_sell_order(self, order: ResolvedTradeOrder) -> TradeValidationResult:
+        if self.holdings_df.loc[order.buyer_team_id, f"stock{order.target_team_id}"] < order.quantity:
+            return TradeValidationResult(False, f"❌ [매도 실패] {order.buyer_team_name}팀이 보유한 {order.target_team_name} 주식이 부족합니다.")
+        return TradeValidationResult(True, "success", order)
+
+    def _execute_trade_order(self, order: ResolvedTradeOrder) -> str:
+        if order.trade_action == "Buy":
+            return self._execute_buy_order(order)
+        return self._execute_sell_order(order)
+
+    def _execute_buy_order(self, order: ResolvedTradeOrder) -> str:
+        trade_amount = order.quantity * self.teams_df.loc[order.target_team_id, "price"]
+        if self._is_round_one_or_two_self_stock_trade(order):
+            self.self_stock_purchase_counts[self.round_num - 1][order.buyer_team_id] += order.quantity
+
+        self.teams_df.loc[order.buyer_team_id, "capital"] -= trade_amount
+        self.holdings_df.loc[order.buyer_team_id, f"stock{order.target_team_id}"] += order.quantity
+        self.holdings_df.loc[SYSTEM_TEAM_ID, f"stock{order.target_team_id}"] -= order.quantity
+        return f"🟩 [매수 체결] {order.buyer_team_name}팀 -> {order.target_team_name} {order.quantity}주 매수 완료."
+
+    def _execute_sell_order(self, order: ResolvedTradeOrder) -> str:
+        trade_amount = order.quantity * self.teams_df.loc[order.target_team_id, "price"]
+        if self._is_round_one_or_two_self_stock_trade(order):
+            self.self_stock_purchase_counts[self.round_num - 1][order.buyer_team_id] -= order.quantity
+
+        self.teams_df.loc[order.buyer_team_id, "capital"] += trade_amount
+        self.holdings_df.loc[order.buyer_team_id, f"stock{order.target_team_id}"] -= order.quantity
+        self.holdings_df.loc[SYSTEM_TEAM_ID, f"stock{order.target_team_id}"] += order.quantity
+        return f"🟥 [매도 체결] {order.buyer_team_name}팀 -> {order.target_team_name} {order.quantity}주 매도 완료."
+
+    def _finalize_big_game_round(self) -> None:
+        self.teams_df["price before"] = self.teams_df["price"]
+        self.teams_df["price"] = self.teams_df["price"] + (self.teams_df["capital"] / 100).astype(int)
+        self.teams_df["market capital"] = self.teams_df["price"] * 100
+
+        if self.round_num != 3:
+            self.teams_df["price delta"] = self.teams_df["price"] - self.teams_df["price before"]
+            self.teams_df["price ROR"] = 0.0
+            valid_previous_price = self.teams_df["price before"] != 0
+            self.teams_df.loc[valid_previous_price, "price ROR"] = round(
+                self.teams_df.loc[valid_previous_price, "price delta"]
+                / self.teams_df.loc[valid_previous_price, "price before"]
+                * 100,
+                1,
+            )
+
         self.update_financial_metrics()
         self.save_to_disk()
+        self.create_backup()
 
+    @staticmethod
+    def _is_big_game_end_signal(order: ResolvedTradeOrder) -> bool:
+        return (
+            order.buyer_team_id == "A"
+            and order.trade_action == "Buy"
+            and order.target_team_id == "A"
+            and order.quantity == END_GAME_QUANTITY
+        )
+
+    def _violates_self_stock_limit(self, order: ResolvedTradeOrder) -> bool:
+        if not self._is_round_one_or_two_self_stock_trade(order):
+            return False
+        current_count = self.self_stock_purchase_counts[self.round_num - 1][order.buyer_team_id]
+        return current_count + order.quantity >= 10
+
+    def _is_round_one_or_two_self_stock_trade(self, order: ResolvedTradeOrder) -> bool:
+        return self.round_num in (1, 2) and order.buyer_team_id == order.target_team_id
+
+    # ------------------------------------------------------------------
+    # Dashboard query helpers
+    # ------------------------------------------------------------------
     def get_dashboard_data(self) -> List[Dict[str, Any]]:
-        """현재 팀 자산 상태를 프론트엔드 대시보드(Socket.IO)용 구조로 변환합니다."""
-        df_copy = self.teams_df.copy().reset_index()
-        return df_copy.to_dict(orient='records')[:len(df_copy.to_dict(orient='records')) - 1]
+        """Return team rows in Socket.IO dashboard packet format."""
+        dashboard_rows = self.teams_df.copy().reset_index().to_dict(orient="records")
+        return [row for row in dashboard_rows if row["Team"] != SYSTEM_TEAM_ID]
 
-    # =========================================================================
-    # 🔍 [신규 추가] 특정 팀의 데이터만 필터링하여 조회하는 인터페이스
-    # =========================================================================
     def get_team_status(self, team_id: str) -> Optional[Dict[str, Any]]:
-        """
-        특정 팀의 자본금, 주가, 자회사 리스트 등 기본 재무 상태를 딕셔너리로 반환합니다.
-        존재하지 않는 팀 ID일 경우 None을 반환합니다.
-        """
-        upper_team_id = team_id.upper()
-        if upper_team_id not in self.teams_df.index:
-            self.log(f"⚠️ [조회 실패] 존재하지 않는 팀 ID입니다: {upper_team_id}")
+        """Return one team's financial status for participant-specific packets."""
+        normalized_team_id = team_id.upper()
+        if normalized_team_id not in self.teams_df.index:
+            self.log(f"⚠️ [조회 실패] 존재하지 않는 팀 ID입니다: {normalized_team_id}")
             return None
 
-        # 해당 팀의 행(Row)만 추출하여 딕셔너리로 변환
-        team_data = self.teams_df.loc[upper_team_id].to_dict()
-        team_data['team_id'] = upper_team_id  # 딕셔너리 내부에 ID key도 포함시켜주면 프론트에서 쓰기 좋습니다.
+        team_data = self.teams_df.loc[normalized_team_id].to_dict()
+        team_data["team_id"] = normalized_team_id
         return team_data
 
     def get_team_holdings(self, team_id: str) -> Optional[Dict[str, int]]:
-        """
-        특정 팀이 보유한 타사 주식 현황(지분율)을 딕셔너리 형태로 반환합니다.
-        예: {'stockA': 10, 'stockB': 55, ...}
-        """
-        upper_team_id = team_id.upper()
-        if upper_team_id not in self.holdings_df.index:
+        """Return one team's stock holdings."""
+        normalized_team_id = team_id.upper()
+        if normalized_team_id not in self.holdings_df.index:
             return None
-
-        return self.holdings_df.loc[upper_team_id].to_dict()
+        return self.holdings_df.loc[normalized_team_id].to_dict()
 
     def get_single_team_dashboard_packet(self, team_id: str) -> Optional[Dict[str, Any]]:
-        """
-        재무 정보와 주식 보유 현황을 하나로 합쳐서 소켓 패킷 규격으로 만들어줍니다.
-        """
+        """Return financial status and holdings in one participant packet."""
         status = self.get_team_status(team_id)
         holdings = self.get_team_holdings(team_id)
-
         if not status or not holdings:
             return None
-
-        # 두 딕셔ner리를 하나로 병합 (Merge)
         return {**status, "holdings": holdings}
+
+    # ------------------------------------------------------------------
+    # Backward-compatible method aliases
+    # ------------------------------------------------------------------
+    def check_and_update_subsidiaries(self) -> None:
+        self.update_subsidiary_relationships()
+
+    def check_and_update_subsidaries_and_metrics(self) -> None:
+        self.refresh_state_after_settlement()
+
+    def check_sabotage(self, winners_input: str) -> List[tuple[str, int]]:
+        return self.find_sabotage_candidates(winners_input)
