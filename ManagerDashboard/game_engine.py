@@ -264,7 +264,13 @@ class BPGameEngine:
         ]
 
     def execute_sabotage(self, child_id: str, rank: int) -> bool:
+        if child_id not in ACTIVE_TEAM_IDS or rank < 0 or rank >= len(self.SABOTAGE_STOCK_REWARDS):
+            return False
+
         parent_id = self.teams_df.at[child_id, "parent"]
+        if parent_id == "X":
+            return False
+
         reward_quantity = self.SABOTAGE_STOCK_REWARDS[rank]
         cost = round((4 - rank) * 50000 * (1.3 ** (self.round_num - 1)), -2)
 
@@ -278,6 +284,9 @@ class BPGameEngine:
 
     def execute_forced_trade(self, child_id: str, quantity: int) -> bool:
         """Force a parent company to sell the child's stock back to the child."""
+        if quantity <= 0:
+            return False
+
         parent_id = self.teams_df.at[child_id, "parent"]
         if parent_id == "X":
             return False
