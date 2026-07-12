@@ -11,3 +11,5 @@
 /ManagerDashboard/__pycache__
 /ManagerDashboard/.idea
 /ManagerDashboard/.venv
+
+*/.DS_Store
